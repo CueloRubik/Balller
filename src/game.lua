@@ -68,7 +68,7 @@ function G.buyUpgrade()
  G.boots=G.boots+1
  G.notify('¡Zapatillas nivel '..G.boots..'! +20 de velocidad')
  Sound.play('upgrade')
- G.saveRun()
+ G.saveSession()
  return true
 end
 function G.ballSpeed()
@@ -91,14 +91,46 @@ function G.snapshot()
  }
 end
 function G.saveRun()
- if not G.slot then return false end
+ if not G.slot or G.tutorial then return false end
  local snapshot=G.snapshot()
- return snapshot~=nil and Save.storeRun(snapshot,G.slot)
+ local ok=snapshot~=nil and Save.storeRun(snapshot,G.slot)
+ if ok then
+  G.saveError=nil G.saveNoticeT=2
+ else
+  G.saveError='No se pudo guardar la partida. Reintenta antes de salir.'
+ end
+ return ok
 end
+function G.saveSession()
+ local active=G.state=='shop' or G.state=='playing' or G.state=='pause'
+ local ok=true
+ if active and not G.tutorial then ok=G.saveRun() end
+ if Progress.dirty and not Progress.save() then
+  G.saveError='No se pudo guardar el progreso. Reintenta antes de salir.'
+  ok=false
+ end
+ if not Save.store() then
+  G.saveError='No se pudieron guardar los ajustes y récords.'
+  ok=false
+ end
+ if ok then G.saveError=nil G.saveNoticeT=2 end
+ return ok
+end
+function G.saveTutorial()
+ if Save.store() then
+  G.tutorialSaveFailed=false G.saveError=nil
+  return true
+ end
+ G.tutorialSaveFailed=true
+ G.saveError='No se pudo guardar que completaste la práctica.'
+ return false
+end
+
 function G.newRun(slot,difficulty)
  if type(slot)~='number' or slot%1~=0 or slot<1 or slot>3 then return false end
  G.difficulty=Difficulty.get(difficulty).id
  G.tutorial=false
+ G.saveError=nil G.saveNoticeT=0
  G.tutorialStep=0
  G.slot=slot
  G.state='shop'
@@ -149,6 +181,7 @@ function G.loadRun(slot)
  local s,status,detail=Save.loadRun(slot)
  if not s then return false,status end
  G.slot=slot
+ G.saveError=nil G.saveNoticeT=0
  G.tutorial=false
  G.difficulty=Difficulty.get(s.difficulty).id
  G.rescues=s.rescues or 0
@@ -219,7 +252,7 @@ function G.startRound()
  FX.clear()
  Feedback.resetCombo()
  G.notify('¡Ronda '..G.round..'! Cuida la pelota')
- G.saveRun()
+ if not G.saveSession() then G.state='pause' return false end
  Sound.play('button')
  return true
 end
@@ -252,7 +285,7 @@ function G.endRound()
  Feedback.resetCombo()
  FX.burst(G.ball.x,G.ball.y,C.gold,30)
  Sound.play('round')
- G.saveRun()
+ G.saveSession()
 end
 function G.finish(reason)
  if G.state~='playing' then return end
@@ -278,7 +311,7 @@ function G.buy(index)
  G.inventory[index]=G.inventory[index]+1
  Sound.play('coin',1.05)
  G.notify(info.name..' añadido a la mochila')
- G.saveRun()
+ G.saveSession()
  return true
 end
 function G.place(x,y)
@@ -303,6 +336,7 @@ function G.startTutorial()
  G.slot=nil
  G.difficulty=1
  G.tutorial=true
+ G.saveError=nil G.saveNoticeT=0 G.tutorialSaveFailed=false
  Collectibles.clear()
  G.tutorialStep=1
  G.tutorialWalk=0
@@ -336,7 +370,7 @@ function G.tutorialNext()
  G.tutorialStep=G.tutorialStep+1
  if G.tutorialStep>=5 then
   G.state='tutorialDone'
-  Save.tutorialDone=true Save.store()
+  Save.tutorialDone=true G.saveTutorial()
   Sound.play('round')
  else
   local notes={[2]='Toca la pelota',[3]='Acércate y usa ESPACIO',[4]='Pulsa 1 y haz clic en la cancha'}
@@ -355,7 +389,7 @@ function G.pulse()
  end
  local nx,ny=U.normal(dx,dy)
  G.ball.vx,G.ball.vy=nx*460,ny*460
- Ball.enforceSpeed(G.ball,G.ballSpeed())
+ Ball.enforceSpeed(G.ball,G.tutorial and 105 or G.ballSpeed())
  G.ball.cooldown=.22
  G.pulseCooldown=10
  if G.tutorial and G.tutorialStep==3 then G.tutorialNext() end
@@ -369,6 +403,7 @@ function G.pulse()
  return true
 end
 function G.update(dt)
+ G.saveNoticeT=math.max(0,(G.saveNoticeT or 0)-dt)
  G.t=G.t+dt
  G.winFlash=math.max(0,(G.winFlash or 0)-dt)
  G.noticeT=math.max(0,G.noticeT-dt)
@@ -400,7 +435,7 @@ function G.update(dt)
  G.autosaveClock=G.autosaveClock+dt
  if G.autosaveClock>=8 then
   G.autosaveClock=0
-  G.saveRun()
+  if not G.saveSession() then G.state='pause' return end
  end
  G.time=G.time+dt
  G.roundLeft=math.max(0,G.roundLeft-dt)
@@ -481,12 +516,24 @@ function G.update(dt)
  end
 end
 function G.togglePause()
- if G.state=='playing' then G.state='pause' G.saveRun()
- elseif G.state=='pause' then G.state='playing' G.autosaveClock=0 end
+ if G.state=='playing' then
+  G.state='pause'
+  if not G.tutorial then return G.saveSession() end
+  return true
+ elseif G.state=='pause' then
+  G.state='playing' G.autosaveClock=0
+  return true
+ end
+ return false
 end
 function G.backToMenu()
- if not G.tutorial and (G.state=='playing' or G.state=='pause' or G.state=='shop') then G.saveRun() end
+ if G.tutorialSaveFailed and not G.saveTutorial() then return false end
+ if not G.saveSession() then
+  if G.state=='playing' then G.state='pause' end
+  return false
+ end
  G.tutorial=false
  G.state='menu'
+ return true
 end
 return G

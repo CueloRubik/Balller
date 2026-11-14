@@ -20,6 +20,7 @@ local Prefs=require('src.presentation.preferences')
 local HUD=require('src.presentation.hud_layout')
 local Flow=require('src.presentation.run_flow')
 local SlotScreens=require('src.screens.run_slots')
+local SessionHelp=require('src.screens.session_help')
 local S={}
 local b,hitbox
 local sky={.83,.96,1}
@@ -58,10 +59,12 @@ local function cornerCoins()
  chip(736,18,104,'gem','GEMAS',Progress.gems,C.lilac)
  chip(855,18,111,'trophy','RÉCORD',math.floor(Save.best),C.gold)
 end
-function S.bind(fn,register) b=fn hitbox=register Hub.bind(fn) VisualSettings.bind(fn) SlotScreens.bind(fn) end
+function S.bind(fn,register) b=fn hitbox=register Hub.bind(fn) VisualSettings.bind(fn) SlotScreens.bind(fn) SessionHelp.bind(fn) end
 S.hub=Hub
 S.store=Hub.store
 S.confirmPurchase=Hub.confirmPurchase
+S.objectInfo=SessionHelp.objectInfo
+S.exitError=SessionHelp.exitError
 function S.home()
  label('BALLLER',56,23,UI.fonts.big,navy)
  label('Una pelota. Mil formas de salvarla.',60,105,UI.fonts.body,C.mintDark)
@@ -133,9 +136,11 @@ function S.shop()
  top('Taller de partida','Prepara tu mochila para la ronda '..Game.round)
  chip(769,25,188,'coin','MONEDAS',math.floor(Game.coins),C.gold)
  UI.rect(70,110,862,57,19,{.86,.96,.86})
- Icons.draw('flag',104,138,29,C.mintDark)
- label(Game.roundMode().name,132,123,UI.fonts.medium,navy)
- if Game.previousRound>0 then
+ Icons.draw(Game.saveError and 'warning' or 'flag',104,138,29,Game.saveError and C.red or C.mintDark)
+ if not Game.saveError then label(Game.roundMode().name,132,123,UI.fonts.medium,navy) end
+ if Game.saveError then
+  UI.singleLine(Game.saveError,132,129,775,UI.fonts.small,C.red)
+ elseif Game.previousRound>0 then
   label('+'..Game.reward..' monedas'..(Game.gemsReward>0 and ' · +'..Game.gemsReward..' gemas' or ''),404,129,UI.fonts.small,C.mintDark)
  else
   label(Game.roundMode().desc,415,128,UI.fonts.small,C.muted)
@@ -148,6 +153,7 @@ function S.shop()
   Sprites.draw(item.sprite,x+58,y+52,math.floor(Game.t*8)%8+1,91)
   label(item.name,x+100,y+15,UI.fonts.small,navy)
   label('x'..(Game.inventory[i] or 0),x+110,y+43,UI.fonts.medium,C.mintDark)
+  button('info'..i,x+162,y+52,34,34,'',C.blue,'help',true)
   local total=0
   for _,n in ipairs(Game.inventory) do total=total+n end
   local disabled=Game.coins<item.cost or (Game.inventory[i] or 0)>=5 or total>=12
@@ -159,7 +165,7 @@ function S.shop()
  label('ZAPATILLAS  '..Game.boots..'/3',143,532,UI.fonts.small,navy)
  label('+'..(Game.boots*20)..' velocidad',345,532,UI.fonts.small,C.muted)
  button('upgrade',697,524,199,37,cost and ('SUBIR  '..cost) or 'COMPLETO',C.blue,'upgrade',true,{disabled=not cost or Game.coins<cost})
- button('home',80,587,230,65,'GUARDAR',C.blue,'save',true)
+ button('home',80,587,230,65,'Guardar y salir',C.blue,'save',true)
  button('round',533,584,390,69,'JUGAR RONDA '..Game.round,C.mint,'play')
 end
 local itemPage=1
@@ -226,7 +232,7 @@ function S.game()
  UI.progress(782,647,160,8,1-Game.pulseCooldown/10,1)
  label('Espacio',799,659,UI.fonts.tiny,C.muted,'center',128)
  local status=HUD.status
- UI.singleLine(Game.noticeT>0 and Game.notice or '1-8: defensa · Clic: colocar',status.x,status.y,status.w,UI.fonts.tiny,Game.noticeT>0 and navy or C.muted)
+ UI.singleLine(Game.saveError or (Game.noticeT>0 and Game.notice or '1-8: defensa · Clic: colocar'),status.x,status.y,status.w,UI.fonts.tiny,Game.saveError and C.red or (Game.noticeT>0 and navy or C.muted))
 end
 
 function S.roundResults()
@@ -235,7 +241,7 @@ function S.roundResults()
  bgCard(177,98,646,478,cream,29)
  Icons.draw('trophy',500,154,68,C.gold)
  UI.headline('¡Ronda '..d.round..' superada!',218,203,564,UI.fonts.title,navy)
- label('Premios ya añadidos a tus saldos',238,259,UI.fonts.small,C.muted,'center',524)
+ label(Game.saveError and 'Premios pendientes de guardar' or 'Premios ya añadidos a tus saldos',238,259,UI.fonts.small,Game.saveError and C.red or C.muted,'center',524)
  chip(238,305,240,'coin','MONEDAS GANADAS','+'..d.coins,C.gold)
  chip(518,305,240,'gem','GEMAS AL CERRAR','+'..d.gems,C.lilac)
  label(d.hits..' golpes · '..d.score..' puntos',250,387,UI.fonts.body,navy,'center',500)
@@ -243,16 +249,8 @@ function S.roundResults()
  button('resultsHome',224,496,208,56,'Guardar y salir',C.blue,'save',true)
  button('resultsContinue',463,493,309,62,'Ir al taller',C.mint,'bag')
 end
-function S.pause()
- UI.color(C.navy,.43) love.graphics.rectangle('fill',0,0,1000,680)
- bgCard(245,147,510,404,cream,29)
- Icons.draw('pause',500,203,56,C.blue)
- UI.headline('EN PAUSA',283,252,438,UI.fonts.title,navy)
- label(Game.tutorial and 'Práctica sin peligro' or ('Ronda '..Game.round..' · Ranura '..Game.slot),275,324,UI.fonts.body,C.muted,'center',450)
- button('resume',314,373,372,59,'CONTINUAR',C.mint,'play')
- if not Game.tutorial then button('save',294,451,193,55,'GUARDAR',C.blue,'save',true) end
- button('home',Game.tutorial and 314 or 511,451,Game.tutorial and 372 or 193,55,'SALIR',C.lilac,'home',true)
-end
+function S.pause() SessionHelp.pause() end
+
 function S.over()
  UI.color(C.navy,.47) love.graphics.rectangle('fill',0,0,1000,680)
  bgCard(221,141,558,442,cream,29)
@@ -261,14 +259,9 @@ function S.over()
  label(Game.reason,266,311,UI.fonts.small,C.muted,'center',468)
  chip(300,356,179,'star','PUNTOS',math.floor(Game.score),C.gold)
  chip(510,356,185,'flag','RONDAS',math.max(0,Game.round-1),C.blue)
+ if Game.saveError then UI.singleLine(Game.saveError,266,420,468,UI.fonts.tiny,C.red) end
  button('replay',294,457,195,63,'OTRA PARTIDA',C.mint,'play',true)
  button('home',504,457,191,63,'MENÚ',C.blue,'home',true)
 end
-function S.tutorialDone()
- bgCard(217,159,566,387,cream,25)
- Icons.draw('trophy',500,219,76,C.gold)
- UI.headline('¡LISTO PARA JUGAR!',239,277,522,UI.fonts.title,navy)
- label('Ya sabes golpear, rescatar y colocar defensas.',235,357,UI.fonts.small,C.muted,'center',530)
- button('toDifficulty',318,429,364,70,'¡VAMOS!',C.mint,'play')
-end
+function S.tutorialDone() SessionHelp.tutorialDone() end
 return S

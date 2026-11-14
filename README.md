@@ -94,3 +94,5 @@ B2 separa Tienda de gemas/Colección, reúne logros e hitos en Retos y muestra u
 B3 añade canchas PNG Patio/Taller/Ciudad, HUD fuera del área jugable y preferencias visuales guardadas. Ver [alcance y capturas B3](docs/V8-FASE-B3.md). Paquete actual de desarrollo: `python3 tools/package_love.py --output Balller-v8-B3.love`. Pruebas nuevas: `lua tests/b3_preferences.lua` y `lua tests/b3_hud.lua`.
 
 C1 separa Nueva/Continuar y muestra recuperación de copias sin modificar archivos al dibujar las ranuras. Ver [alcance C1](docs/V8-FASE-C1.md) y [progreso general](docs/PROGRESO-V8.md). Paquete actual: `python3 tools/package_love.py --output Balller-v8-C1.love`.
+
+C2 completa pausa/guardar-salir con errores visibles, fichas de las ocho defensas y práctica repetible/omitible sin premios. Ver [informe C2](docs/V8-FASE-C2.md) y [progreso general](docs/PROGRESO-V8.md). Paquete actual de desarrollo: `python3 tools/package_love.py --output Balller-v8-C2.love`.
