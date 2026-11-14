@@ -74,3 +74,15 @@ python3 tools/package_love.py
 ```
 
 Para publicar se recomienda verificar el balance y la legibilidad manualmente en diferentes pantallas y sistemas. Ver `docs/PUBLICACION-V7.md`.
+
+## Desarrollo de v8 por fases
+
+La primera parte protege v7 con fixtures v4–v7, pruebas de tres ranuras, economía, colección y velocidad a 30/60/120 fps. Ver [informe de fase A](docs/V8-FASE-A.md), [inventario de referencia](docs/V8-ASSETS-BASELINE.md) y [plan completo](docs/PLAN-MAESTRO-BALLLER-V8.md).
+
+```bash
+lua tests/v8_compatibility.lua
+lua tests/v8_economy.lua
+lua tests/v8_physics.lua
+```
+
+El juego y el paquete siguen identificados como v7 hasta integrar las fases funcionales de v8.
