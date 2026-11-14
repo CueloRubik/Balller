@@ -1,67 +1,67 @@
 # Balller
 
-**Balller** es un videojuego arcade cenital para [LÖVE 2D](https://love2d.org/) 11.4 o posterior. Controla a un personaje y protege una pelota de pinchos y alcantarillas mientras compras y colocas defensas. Cada partida tiene su propia puntuación y puede terminar en cualquier momento.
+**Balller** es un juego arcade cenital creado con Lua y LÖVE 11.4+. Controlas a un pequeño personaje que debe proteger una pelota mientras aparecen pinchos y alcantarillas. Ganas monedas al golpear la pelota y las utilizas para colocar defensas dentro de la cancha.
 
-## Jugar
+## Ejecutar
 
-Desde la carpeta del proyecto ejecuta:
+1. Instala [LÖVE](https://love2d.org/) 11.4 o más reciente.
+2. Descarga el repositorio y ejecuta `love .` desde su carpeta, o arrastra la carpeta sobre `love.app`.
+3. También puedes comprimir **el contenido** de la carpeta como `.love`.
+
+No requiere librerías de terceros para ejecutar el juego. Los sprites PNG ya vienen incluidos.
+
+## Controles
+
+| Control | Función |
+|---|---|
+| WASD / flechas | Mover al personaje en ocho direcciones |
+| Clic izquierdo | Colocar objeto seleccionado |
+| Teclas 1 a 6 | Seleccionar un objeto |
+| Rueda del ratón | Cambiar de objeto |
+| P / Esc | Pausar o reanudar |
+| Enter | Iniciar una partida o volver a jugar |
+
+## Objetos
+
+| Objeto | Función |
+|---|---|
+| Escudo | Devuelve la pelota al chocar |
+| Impulso | La lanza con mayor fuerza |
+| Tapa | Cubre una alcantarilla |
+| Imán | Atrae la pelota cuando está cerca |
+| Ventilador | La aleja del punto donde se coloca |
+| Reloj | Reduce su velocidad cuando se aproxima |
+
+La tienda muestra los precios y destaca si tienes suficientes monedas. Los objetos tienen duración limitada. El récord y el sonido se guardan localmente.
+
+## Arte y presentación
+
+- `assets/sprites/` contiene **11 PNG independientes** con **104 cuadros de animación** en total.
+- El personaje tiene cuatro secuencias cardinales y cuatro secuencias diagonales de cuatro cuadros cada una. La pelota, los peligros y cada objeto tienen animación propia.
+- `src/icons.lua` dibuja los iconos de la interfaz con código para que conserven definición a diferentes resoluciones.
+- `src/ui.lua` contiene botones, tarjetas, tipografía, etiquetas y marcador.
+- Opcional: si colocas las fuentes `Rubik-Regular.ttf` y `Rubik-Bold.ttf` en `assets/fonts/`, el juego las utilizará. Si no, funciona con la fuente interna de LÖVE. **Las fuentes no se incluyen en el repositorio.**
+
+## Organización
+
+- `main.lua`: pantallas, interfaz y eventos de LÖVE.
+- `src/game.lua`: estado de la partida, puntuación, monedas y feedback.
+- `src/player.lua`, `src/ball.lua`: movimiento y física.
+- `src/hazards.lua`, `src/objects.lua`: peligros y defensas.
+- `src/art.lua`, `src/sprites.lua`, `src/sprites/`: gráficos y animación.
+- `src/icons.lua`, `src/ui.lua`, `src/theme.lua`: lenguaje visual.
+- `src/audio.lua`, `src/feedback.lua`, `src/particles.lua`: efectos.
+- `src/save.lua`: persistencia local.
+- `tests/`: comprobación de sintaxis, arranque simulado y dimensiones de los PNG.
+
+## Pruebas
 
 ```bash
-love .
+python3 tests/check_sprites.py
+lua tests/smoke.lua
+lua tests/smoke.lua fallback
 ```
 
-En macOS puedes abrir el proyecto desde LÖVE Studio o arrastrar la carpeta a la aplicación LÖVE.
+Para recompilar los PNG de los nuevos objetos: `python3 tools/create_extra_sprites.py` (requiere Pillow y CairoSVG). El PNG del personaje diagonal ya está incluido y no requiere recompilarse. El script puede utilizar opcionalmente `assets/source/character_diagonal_4x4.png` como material fuente para rehacerlo.
 
-| Control | Acción |
-|---|---|
-| WASD / flechas | Moverse libremente por la cancha |
-| Clic izquierdo | Colocar la defensa elegida |
-| 1, 2, 3 | Elegir escudo, impulsor o tapa |
-| P / Escape | Pausar o reanudar |
-| Enter | Empezar o repetir partida |
-
-## Arte y animaciones
-
-Cada componente visual tiene **su propio PNG**, en `assets/sprites/`. Las texturas tienen cuadros de **128 × 128 píxeles**: 16 para el personaje (cuatro direcciones) y ocho para cada uno de los seis objetos. Son ilustraciones coloridas con contornos consistentes y animaciones por cuadros, no un único spritesheet compartido.
-
-Si falta un PNG, el juego puede generar una textura de respaldo con el módulo de dibujo de esa entidad. La documentación completa se encuentra en [`docs/ARTE-Y-ANIMACIONES.md`](docs/ARTE-Y-ANIMACIONES.md).
-
-## Mecánicas y efectos
-
-- Pelota cenital con rebotes en las paredes y contra el personaje.
-- Pinchos que emergen y alcantarillas que se abren tras una advertencia.
-- Tres defensas colocables: escudo, impulsor y tapa.
-- Puntuación, monedas, récord, partidas jugadas y sonido configurable.
-- Rachas temporales de golpes con multiplicadores moderados de puntuación.
-- Texto flotante y pequeñas celebraciones al conseguir hitos, sin interrumpir la partida.
-- Guardado local y partidas que pueden reiniciarse rápidamente.
-
-## Código
-
-```text
-Balller/
-├── main.lua
-├── conf.lua
-├── assets/sprites/
-│   ├── character.png
-│   ├── ball.png
-│   ├── spikes.png
-│   ├── drain.png
-│   ├── shield.png
-│   ├── boost.png
-│   └── lid.png
-├── src/
-│   ├── sprites.lua
-│   ├── sprites/        Archivos individuales de dibujo de respaldo
-│   ├── art.lua         Composición de escena y animación
-│   ├── feedback.lua    Rachas, puntos flotantes y celebraciones
-│   ├── game.lua        Bucle de juego
-│   └── ...             Resto de física, audio, datos e interfaz
-├── docs/
-├── tests/
-└── tools/
-```
-
-## Verificaciones
-
-`lua tests/smoke.lua` realiza una prueba de arranque simulada. `python3 tests/check_sprites.py` comprueba las dimensiones de las hojas PNG. Las pruebas automatizadas no sustituyen una revisión visual en LÖVE real.
+Las pruebas automáticas verifican la estructura, sintaxis y flujo simulado. No sustituyen una prueba visual interactiva en LÖVE.

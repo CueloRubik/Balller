@@ -17,7 +17,7 @@ end
 function G.start()
     G.state="playing"
     G.score=0
-    G.coins=35
+    G.coins=45
     G.time=0
     G.spawn=3.8
     G.shake=0
@@ -91,7 +91,7 @@ function G.update(dt)
         FX.burst(G.ball.x,G.ball.y,C.gold,18)
         Sound.play("coin",1.12)
     end
-    O.update(dt)
+    O.update(dt,G.ball)
     local fatal=H.update(dt,G.ball,O.list)
     if fatal then
         G.finish(fatal=="pinchos" and "La pelota se poncho" or "Cayo en una alcantarilla")

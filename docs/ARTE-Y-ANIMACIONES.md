@@ -1,29 +1,35 @@
-# Identidad visual de Balller
+# Arte y animaciones de Balller
 
-Balller utiliza una dirección de arte arcade, clara y colorida. Contornos azul marino, superficies iluminadas, colores diferenciados por función y siluetas reconocibles a pequeña escala.
+## Estilo visual
 
-Los recursos están separados por entidad en `assets/sprites/`. Cada PNG contiene una fila horizontal de cuadros de **128 × 128 píxeles** sobre fondo transparente. Se reproducen con el sistema `src/sprites.lua`.
+Arcade luminoso y colorido con materiales satinados, contorno azul marino, reflejos suaves y sombras cortas. El personaje tiene pelo azul, cinta azul/blanca, playera turquesa y tenis blancos. Los paneles de la interfaz usan el mismo azul marino, blanco, verde menta, amarillo y rosa de los sprites, sin degradados oscuros ni texto decorativo difícil de leer.
+
+## Hojas PNG
+
+Cada cuadro mide 128 x 128 px y las hojas son horizontales. Los sprites se cargan por `src/sprites.lua`. Si no existe un PNG, el juego tiene dibujo alternativo desde `src/sprites/`.
 
 | Archivo | Cuadros | Uso |
 |---|---:|---|
-| `character.png` | 16 | 4 direcciones × 4 cuadros de caminar |
-| `ball.png` | 8 | Giro de la pelota |
-| `spikes.png` | 8 | Aparición de pinchos |
-| `drain.png` | 8 | Apertura de alcantarilla |
-| `shield.png` | 8 | Brillo del escudo |
-| `boost.png` | 8 | Pulso del impulsor |
-| `lid.png` | 8 | Brillo de la tapa |
+| character.png | 16 | 4 movimientos en abajo/derecha/arriba/izquierda, 4 cuadros por dirección |
+| character_diagonal.png | 16 | 4 movimientos en abajo-derecha, abajo-izquierda, arriba-derecha, arriba-izquierda |
+| ball.png | 8 | Giro de la pelota |
+| spikes.png | 8 | Pinchos que emergen |
+| drain.png | 8 | Alcantarilla que se abre |
+| shield.png | 8 | Escudo luminoso |
+| boost.png | 8 | Impulsor animado |
+| lid.png | 8 | Tapa con reflejos |
+| magnet.png | 8 | Imán oscilante |
+| fan.png | 8 | Aspas que giran |
+| clock.png | 8 | Agujas del reloj |
 
-## Escala y movimiento
+## Interfaz
 
-El tamaño de colisión se mantiene **independiente** del sprite. Los sprites se suavizan al reducirse para que las imágenes de alta resolución conserven contornos nítidos. Cada cuadro ocupa exactamente 128 × 128 píxeles, para evitar saltos al animarse.
+- Menú con ilustración del personaje y pelota, botones destacados e indicadores de récord.
+- Marcador con iconos de estrella, moneda y reloj.
+- Tienda con iconos reales de cada objeto, atajos 1 a 6 y precio con estado de disponibilidad.
+- Tarjetas superpuestas para instrucciones, pausa y resultados.
+- Fuentes opcionales Rubik (Regular/Bold) con fallback de LÖVE.
 
-Las advertencias aparecen **antes** del peligro activo: un anillo de color destaca los pinchos y otro señala la alcantarilla. Durante la fase de advertencia los objetos no causan daño.
+## Feedback
 
-Los sonidos, las partículas, los puntos flotantes y los mensajes de racha responden a las acciones del jugador. Se mantienen breves para que no dificulten la lectura de la cancha.
-
-## Edición de recursos
-
-Para reemplazar un sprite, conserva el nombre del PNG, la fila de cuadros, el fondo transparente y las dimensiones. El renderizador de LÖVE lo cargará automáticamente al iniciar.
-
-`tools/build_sprites.py` puede regenerar los seis objetos a partir de ilustraciones vectoriales. Si se proporciona `tools/character_source.png`, también reconstruye el personaje. El juego contiene ilustraciones de respaldo en `src/sprites/` para permitir el arranque incluso sin los PNG.
+Los golpes y rebotes añaden partículas breves, sonidos de distinta altura, números emergentes y rachas. No hay compras reales ni temporizadores para presionar al jugador a volver. Los efectos se pueden desactivar mediante la opción de sonido del menú.
