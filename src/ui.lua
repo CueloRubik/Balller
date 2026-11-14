@@ -64,7 +64,8 @@ function UI.button(x,y,w,h,label,c,mouseX,mouseY,icon,compact,options)
  local pressed=hover and not options.disabled and love.mouse and love.mouse.isDown and love.mouse.isDown(1)
  local state=options.disabled and 2 or (pressed and 1 or (options.selected and 3 or 0))
  local lift=pressed and 3 or (hover and not options.disabled and -2 or 0)
- if not Assets.surface(Assets.palette(c),state,x,y+lift,w,h+4) then
+ local palette=Assets.palette(c)
+ if not Assets.surface(palette,state,x,y+lift,w,h+4) then
   local r=math.min(16,h/3)
   UI.rect(x,y+6,w,h,r,C.shadow)
   UI.rect(x,y+lift,w,h,r,options.disabled and {.62,.72,.74} or c)
@@ -74,7 +75,7 @@ function UI.button(x,y,w,h,label,c,mouseX,mouseY,icon,compact,options)
  local iconSize=compact and 23 or 29
  local padding=icon and iconSize+8 or 0
  if font:getWidth(label)>w-28-padding then font=UI.fonts.tiny end
- local textColor=(c==C.gold or c==C.paper) and C.ink or C.paper
+ local textColor=(palette==2 or palette==5) and C.ink or C.paper
  if options.disabled then textColor=C.ink end
  local tw=font:getWidth(label)
  if label=='' and icon then
