@@ -18,3 +18,5 @@ jobs:
         run: lua tests/smoke.lua
       - name: Smoke test without sprite images
         run: lua tests/smoke.lua fallback
+      - name: Check eight player directions
+        run: lua tests/verify_directions.lua
