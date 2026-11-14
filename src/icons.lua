@@ -66,6 +66,26 @@ function I.draw(name,x,y,size,c)
   g.circle('fill',0,6,1.6)
  elseif name=='spark' then
   path(0,-11,3,-3,11,0,3,3,0,11,-3,3,-11,0,-3,-3)
+ elseif name=='flag' then
+  g.line(-8,11,-8,-11)
+  path(-7,-10,9,-8,3,0,-7,-2)
+ elseif name=='bag' then
+  g.rectangle('fill',-9,-5,18,16,4,4)
+  g.setColor(.18,.38,.45)
+  g.setLineWidth(2.5)
+  g.arc('line','open',0,-5,5,math.pi,math.pi*2)
+ elseif name=='save' then
+  g.rectangle('fill',-10,-10,20,20,3,3)
+  g.setColor(.18,.4,.5)
+  g.rectangle('fill',-6,-10,12,8,1,1)
+  g.setColor(1,1,1)
+  g.rectangle('fill',-6,1,12,9,2,2)
+  g.setColor(.18,.4,.5)
+  g.rectangle('fill',-3,4,6,5)
+ elseif name=='plus' then
+  g.setLineWidth(4)
+  g.line(-8,0,8,0)
+  g.line(0,-8,0,8)
  elseif name=='back' then
   g.setLineWidth(3.8) g.line(-2,-9,-10,0,-2,9)
   g.line(-10,0,10,0)

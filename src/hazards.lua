@@ -1,41 +1,77 @@
-local U=require("src.util")
-local A=require("src.arena")
+local U=require('src.util')
+local A=require('src.arena')
 local H={list={}}
+H.names={'Pinchos','Alcantarilla','Sierra','Descarga','Remolino'}
 function H.clear() H.list={} end
-function H.spawn(p,b)
-  for attempt=1,35 do
-    local x=love.math.random(A.x+75,A.x+A.w-75)
-    local y=love.math.random(A.y+75,A.y+A.h-75)
-    local kind=love.math.random(1,2)
-    local r=kind==1 and 29 or 33
-    local valid=U.dist(x,y,p.x,p.y)>r+p.r+65 and U.dist(x,y,b.x,b.y)>r+b.r+65
-    for _,h in ipairs(H.list) do
-      if U.dist(x,y,h.x,h.y)<r+h.r+45 then valid=false break end
-    end
-    if valid then
-      H.list[#H.list+1]={x=x,y=y,r=r,kind=kind,age=0,warning=1.7,active=kind==1 and 4.5 or 5.5,fade=.45}
-      return true
-    end
+function H.spawn(p,b,round)
+ round=math.max(1,math.floor(round or 1))
+ local kinds=math.min(5,2+math.floor(round/2))
+ for attempt=1,45 do
+  local x=love.math.random(A.x+82,A.x+A.w-82)
+  local y=love.math.random(A.y+82,A.y+A.h-82)
+  local kind=love.math.random(1,kinds)
+  local r=({29,33,30,35,34})[kind]
+  local valid=U.dist(x,y,p.x,p.y)>r+p.r+75 and U.dist(x,y,b.x,b.y)>r+b.r+75
+  for _,h in ipairs(H.list) do
+   if U.dist(x,y,h.x,h.y)<r+h.r+62 then valid=false break end
   end
-  return false
+  if valid then
+   local diagonal=(love.math.random(1,2)==1)
+   local speed=95+math.min(round*9,75)
+   H.list[#H.list+1]={
+    x=x,y=y,r=r,kind=kind,age=0,
+    warning=kind==3 and 2.1 or 1.8,
+    active=kind==5 and 6.8 or 5.2,fade=.5,
+    vx=kind==3 and (diagonal and speed or 0) or 0,
+    vy=kind==3 and (not diagonal and speed or 0) or 0,
+    phase=love.math.random()*6.28,cooldown=0
+   }
+   return true
+  end
+ end
+ return false
+end
+local function covered(h,objects)
+ for _,o in ipairs(objects) do
+  if o.kind==3 and U.dist(o.x,o.y,h.x,h.y)<h.r+10 then return true end
+ end
+ return false
 end
 function H.update(dt,b,objects)
-  for i=#H.list,1,-1 do
-    local h=H.list[i]
-    h.age=h.age+dt
-    local endAt=h.warning+h.active
-    if h.age>endAt+h.fade then
-      table.remove(H.list,i)
-    elseif h.age>=h.warning and h.age<endAt then
-      if U.dist(b.x,b.y,h.x,h.y)<h.r+b.r-6 then
-        if h.kind==1 then return "pinchos" end
-        local safe=false
-        for _,o in ipairs(objects) do
-          if o.kind==3 and U.dist(o.x,o.y,h.x,h.y)<h.r+12 then safe=true break end
-        end
-        if not safe then return "alcantarilla" end
-      end
-    end
+ for i=#H.list,1,-1 do
+  local h=H.list[i]
+  h.age=h.age+dt
+  h.cooldown=math.max(0,(h.cooldown or 0)-dt)
+  local endAt=h.warning+h.active
+  if h.age>endAt+h.fade then
+   table.remove(H.list,i)
+  elseif h.age>=h.warning and h.age<endAt then
+   if h.kind==3 then
+    h.x=h.x+h.vx*dt
+    h.y=h.y+h.vy*dt
+    local l,r,t,bot=A.bounds(h.r+18)
+    if h.x<l then h.x=l h.vx=math.abs(h.vx) end
+    if h.x>r then h.x=r h.vx=-math.abs(h.vx) end
+    if h.y<t then h.y=t h.vy=math.abs(h.vy) end
+    if h.y>bot then h.y=bot h.vy=-math.abs(h.vy) end
+   end
+   local dist=U.dist(b.x,b.y,h.x,h.y)
+   if h.kind==5 and dist<145 and dist>2 then
+    local dx,dy=(b.x-h.x)/dist,(b.y-h.y)/dist
+    local force=430*(1-dist/145)*dt
+    b.vx=b.vx-dy*force
+    b.vy=b.vy+dx*force
+   elseif h.kind==4 then
+    local charged=((h.age-h.warning+h.phase)%2.3)<1.3
+    if charged and dist<h.r+b.r-8 then return 'descarga' end
+   elseif h.kind==2 then
+    if dist<h.r+b.r-8 and not covered(h,objects) then return 'alcantarilla' end
+   elseif h.kind==1 and dist<h.r+b.r-7 then
+    return 'pinchos'
+   elseif h.kind==3 and dist<h.r+b.r-8 then
+    return 'sierra'
+   end
   end
+ end
 end
 return H

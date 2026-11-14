@@ -2,23 +2,22 @@ local U=require('src.util')
 local A=require('src.arena')
 local O={list={},selected=1}
 O.types={
- {name='Escudo',short='Rebota',sprite='shield',cost=15,r=32,hits=7,duration=24,desc='Desvia la pelota al tocarlo.'},
- {name='Impulso',short='Acelera',sprite='boost',cost=25,r=24,hits=11,duration=20,desc='Lanza la pelota con fuerza.'},
- {name='Tapa',short='Protege',sprite='lid',cost=35,r=32,hits=1,duration=12,desc='Cubre una alcantarilla abierta.'},
- {name='Iman',short='Atrae',sprite='magnet',cost=30,r=27,hits=99,duration=15,desc='Atrae la pelota desde lejos.'},
- {name='Ventilador',short='Aleja',sprite='fan',cost=30,r=27,hits=99,duration=15,desc='Aleja la pelota de los peligros.'},
- {name='Reloj',short='Frena',sprite='clock',cost=25,r=27,hits=99,duration=14,desc='Reduce su velocidad cerca de el.'}
+ {name='Escudo',sprite='shield',cost=22,r=32,hits=7,duration=32,desc='Rebota la pelota. 7 golpes.'},
+ {name='Impulso',sprite='boost',cost=30,r=24,hits=11,duration=26,desc='Lanza la pelota lejos.'},
+ {name='Tapa',sprite='lid',cost=20,r=32,hits=1,duration=16,desc='Cubre una alcantarilla.'},
+ {name='Imán',sprite='magnet',cost=38,r=27,hits=99,duration=23,desc='Atrae la pelota.'},
+ {name='Ventilador',sprite='fan',cost=35,r=27,hits=99,duration=23,desc='Empuja la pelota.'},
+ {name='Reloj',sprite='clock',cost=34,r=27,hits=99,duration=20,desc='Ralentiza la pelota.'}
 }
 function O.clear() O.list={} O.selected=1 end
-function O.place(x,y,coins,p,b,hazards)
+function O.place(x,y,p,b,hazards)
  local kind=O.selected
  local info=O.types[kind]
  if not info then return false,'Objeto desconocido' end
- if coins<info.cost then return false,'Necesitas '..(info.cost-coins)..' monedas mas' end
- if not A.contains(x,y,info.r+20) then return false,'Elige un lugar dentro de la cancha' end
- if U.dist(x,y,p.x,p.y)<info.r+p.r+12 or U.dist(x,y,b.x,b.y)<info.r+b.r+12 then return false,'Ese lugar esta ocupado' end
+ if not A.contains(x,y,info.r+20) then return false,'Elige un punto dentro de la cancha' end
+ if U.dist(x,y,p.x,p.y)<info.r+p.r+12 or U.dist(x,y,b.x,b.y)<info.r+b.r+12 then return false,'Ese lugar está ocupado' end
  for _,o in ipairs(O.list) do
-  if U.dist(x,y,o.x,o.y)<info.r+o.r+10 then return false,'Demasiado cerca de otro objeto' end
+  if U.dist(x,y,o.x,o.y)<info.r+o.r+10 then return false,'Está muy cerca de otra defensa' end
  end
  if kind==3 then
   local valid=false
@@ -28,11 +27,11 @@ function O.place(x,y,coins,p,b,hazards)
   if not valid then return false,'Pon la tapa sobre una alcantarilla' end
  else
   for _,h in ipairs(hazards) do
-   if U.dist(x,y,h.x,h.y)<info.r+h.r+6 then return false,'Ese lugar es peligroso' end
+   if h.kind~=5 and U.dist(x,y,h.x,h.y)<info.r+h.r+6 then return false,'Ese lugar es peligroso' end
   end
  end
  O.list[#O.list+1]={x=x,y=y,r=info.r,kind=kind,hits=info.hits,life=info.duration,fullLife=info.duration,phase=love.math.random()*6.28,fx=0}
- return true,info.cost
+ return true
 end
 function O.update(dt,b)
  for i=#O.list,1,-1 do

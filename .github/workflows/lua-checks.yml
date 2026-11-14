@@ -14,6 +14,8 @@ jobs:
         run: find . -type f -name '*.lua' -print0 | xargs -0 -n 1 luac -p
       - name: Verify PNG sprites
         run: python3 tests/check_sprites.py
+      - name: Validate round-trip save format
+        run: lua tests/runfile.lua
       - name: Smoke test with sprite images
         run: lua tests/smoke.lua
       - name: Smoke test without sprite images

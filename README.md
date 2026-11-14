@@ -1,67 +1,106 @@
 # Balller
 
-**Balller** es un juego arcade cenital creado con Lua y LÖVE 11.4+. Controlas a un pequeño personaje que debe proteger una pelota mientras aparecen pinchos y alcantarillas. Ganas monedas al golpear la pelota y las utilizas para colocar defensas dentro de la cancha.
+**Balller v4** es un juego arcade cenital hecho con **LÖVE 2D y Lua**. La misión es proteger una pelota de peligros durante una serie de rondas. Entre rondas, compras defensas que puedes colocar libremente en el terreno. Una partida termina cuando la pelota toca un peligro mortal.
 
-## Ejecutar
+## Jugar
 
-1. Instala [LÖVE](https://love2d.org/) 11.4 o más reciente.
-2. Descarga el repositorio y ejecuta `love .` desde su carpeta, o arrastra la carpeta sobre `love.app`.
-3. También puedes comprimir **el contenido** de la carpeta como `.love`.
+Requiere LÖVE 11.4 o posterior:
 
-No requiere librerías de terceros para ejecutar el juego. Los sprites PNG ya vienen incluidos.
+```bash
+love .
+```
+
+O abre esta carpeta desde LÖVE Studio. Para generar un `.love`, comprime el contenido de la carpeta (con `main.lua` en la raíz) y cambia `.zip` por `.love`.
+
+## Cómo funcionan las partidas
+
+1. En el menú, pulsa **Nueva partida** y selecciona una de las **tres ranuras**.
+2. Empiezas en la **tienda** con 40 monedas, un escudo y una tapa gratis.
+3. Compra defensas para tu mochila y pulsa **Jugar ronda 1**.
+4. Controla al personaje con WASD o flechas. Golpea la pelota para desviarla y colócales defensas a los peligros con el ratón.
+5. Cuando el tiempo llega a cero, ganas la ronda y vuelves a la tienda. Los objetos que no usaste siguen en tu mochila.
+6. Cada nueva ronda dura un poco más y añade peligros o aumenta su frecuencia. Si pierdes, la partida finaliza y **se libera solamente su ranura de guardado**.
+
+No hay monedas sueltas durante una ronda ni compras accidentales al colocar defensas. **Las monedas se ganan únicamente al completar una ronda y se gastan únicamente en la tienda.**
+
+## Monedas y puntuación
+
+- **Monedas iniciales:** 40.
+- **Recompensa por superar una ronda:** `18 + 6 × número de ronda`.
+- **Bonus por golpes:** `2 × mínimo(golpes de la ronda, 15)`.
+- **Objetivo opcional:** 5 + número de ronda (máximo 15) golpes para ganar **12 monedas extra**.
+- Ejemplo: en la ronda 1, si golpeas 7 veces, recibes **24 + 14 + 12 = 50 monedas**.
+- El **score** es independiente de las monedas. Aumenta por tiempo sobrevivido, golpes, rachas, defensas y rondas superadas. Sirve para superar el récord.
+
+| Defensa | Precio | Función |
+| --- | ---: | --- |
+| Escudo | 22 | Rebota la pelota |
+| Impulso | 30 | La dispara con más fuerza |
+| Tapa | 20 | Cubre una alcantarilla |
+| Imán | 38 | La atrae en su radio |
+| Ventilador | 35 | La empuja en su radio |
+| Reloj | 34 | Reduce su velocidad cercana |
+
+Puedes almacenar hasta **12 objetos** en total, con un máximo de **5 de cada tipo**. Solo se consume una unidad al colocarla correctamente. Las defensas colocadas duran un tiempo limitado y desaparecen entre rondas.
+
+## Dificultad y peligros
+
+- **Ronda 1:** pinchos que emergen y alcantarillas que se abren.
+- **Ronda 2:** se desbloquea una **sierra móvil** que rebota contra los bordes.
+- **Ronda 4:** aparece una **descarga eléctrica** intermitente, peligrosa mientras brilla.
+- **Ronda 6:** se incorpora el **remolino**, que cambia la dirección y velocidad de la pelota sin destruirla directamente.
+- Los peligros tienen un aviso previo antes de activarse. Conforme avanzas, aparecen con mayor frecuencia y puede haber más simultáneamente (con un límite de 7).
+- Las rondas duran 28 segundos al empezar y aumentan 2 segundos por ronda, hasta un máximo de 55 segundos.
+
+## Guardado y recuperación
+
+Hay **3 ranuras independientes**. Se guardan automáticamente cuando empieza o termina una ronda, cuando compras, al pausar y al cerrar la aplicación. También puedes pulsar **Guardar** desde la pausa o **Guardar y salir** desde la tienda.
+
+**Continuar** en el menú restaura la partida, incluyendo ronda, monedas, inventario, posiciones y peligros. Si la ronda estaba en curso, se reabre pausada. La partida perdida deja de poder continuarse. La opción **Reemplazar** pide confirmación antes de borrar otro guardado.
+
+Los guardados se almacenan en la carpeta de datos de LÖVE bajo la identidad `balller`:
+
+- `save.txt`: récord, puntuación histórica, partidas y preferencias de sonido.
+- `partida_1.txt`, `partida_2.txt`, `partida_3.txt`: partidas recuperables.
+
+El lector de guardados valida los campos y no ejecuta código desde archivos de guardado.
 
 ## Controles
 
-| Control | Función |
-|---|---|
+| Tecla | Acción |
+| --- | --- |
 | WASD / flechas | Mover al personaje en ocho direcciones |
-| Clic izquierdo | Colocar objeto seleccionado |
-| Teclas 1 a 6 | Seleccionar un objeto |
-| Rueda del ratón | Cambiar de objeto |
-| P / Esc | Pausar o reanudar |
-| Enter | Iniciar una partida o volver a jugar |
+| Clic izquierdo | Colocar la defensa seleccionada |
+| 1–6 | Elegir una defensa de la mochila |
+| Rueda del ratón | Cambiar defensa seleccionada |
+| P / Escape | Pausar o continuar |
+| Enter | Abrir elección de ranura o iniciar ronda desde la tienda |
 
-## Objetos
+Se pausa automáticamente al perder el foco de la ventana.
 
-| Objeto | Función |
-|---|---|
-| Escudo | Devuelve la pelota al chocar |
-| Impulso | La lanza con mayor fuerza |
-| Tapa | Cubre una alcantarilla |
-| Imán | Atrae la pelota cuando está cerca |
-| Ventilador | La aleja del punto donde se coloca |
-| Reloj | Reduce su velocidad cuando se aproxima |
+## Gráficos, sonidos y organización
 
-La tienda muestra los precios y destaca si tienes suficientes monedas. Los objetos tienen duración limitada. El récord y el sonido se guardan localmente.
+El juego utiliza 14 hojas PNG independientes con **128 cuadros de animación** (128 × 128 por cuadro) y texturas separadas de personaje, pelota, defensas y peligros. Se incluyen dibujos alternativos por código si no se encuentran las imágenes. La interfaz conserva el aspecto claro y colorido de Balller v3.
 
-## Arte y presentación
-
-- `assets/sprites/` contiene **11 PNG independientes** con **104 cuadros de animación** en total.
-- El personaje tiene cuatro secuencias cardinales y cuatro secuencias diagonales de cuatro cuadros cada una. La pelota, los peligros y cada objeto tienen animación propia.
-- `src/icons.lua` dibuja los iconos de la interfaz con código para que conserven definición a diferentes resoluciones.
-- `src/ui.lua` contiene botones, tarjetas, tipografía, etiquetas y marcador.
-- Opcional: si colocas las fuentes `Rubik-Regular.ttf` y `Rubik-Bold.ttf` en `assets/fonts/`, el juego las utilizará. Si no, funciona con la fuente interna de LÖVE. **Las fuentes no se incluyen en el repositorio.**
-
-## Organización
-
-- `main.lua`: pantallas, interfaz y eventos de LÖVE.
-- `src/game.lua`: estado de la partida, puntuación, monedas y feedback.
-- `src/player.lua`, `src/ball.lua`: movimiento y física.
-- `src/hazards.lua`, `src/objects.lua`: peligros y defensas.
-- `src/art.lua`, `src/sprites.lua`, `src/sprites/`: gráficos y animación.
-- `src/icons.lua`, `src/ui.lua`, `src/theme.lua`: lenguaje visual.
-- `src/audio.lua`, `src/feedback.lua`, `src/particles.lua`: efectos.
-- `src/save.lua`: persistencia local.
-- `tests/`: comprobación de sintaxis, arranque simulado y dimensiones de los PNG.
+- `main.lua`: menús, tienda, ranuras, entrada y dibujo de interfaz.
+- `src/game.lua`: ciclo de rondas, economía y puntuación.
+- `src/hazards.lua`: lógica de los cinco peligros.
+- `src/objects.lua`: seis defensas e inventario.
+- `src/runfile.lua` y `src/save.lua`: serialización segura y tres ranuras.
+- `src/art.lua`, `src/sprites.lua`, `src/icons.lua`, `src/ui.lua`: dibujo y animaciones.
+- `assets/sprites/`: PNG separados por tipo.
+- `tools/create_hazards.py`: genera las tres nuevas hojas PNG (requiere Pillow y CairoSVG solo para regenerar recursos).
+- `tests/`: pruebas de lógica, arranque simulado y sprites.
 
 ## Pruebas
 
+En un equipo con Lua 5.4 y Python 3:
+
 ```bash
-python3 tests/check_sprites.py
 lua tests/smoke.lua
 lua tests/smoke.lua fallback
+lua tests/verify_directions.lua
+python3 tests/check_sprites.py
 ```
 
-Para recompilar los PNG de los nuevos objetos: `python3 tools/create_extra_sprites.py` (requiere Pillow y CairoSVG). El PNG del personaje diagonal ya está incluido y no requiere recompilarse. El script puede utilizar opcionalmente `assets/source/character_diagonal_4x4.png` como material fuente para rehacerlo.
-
-Las pruebas automáticas verifican la estructura, sintaxis y flujo simulado. No sustituyen una prueba visual interactiva en LÖVE.
+Se pueden ejecutar pruebas de sintaxis con `luac -p`. Estas pruebas no sustituyen una revisión visual dentro de LÖVE.

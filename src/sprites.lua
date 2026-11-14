@@ -1,6 +1,6 @@
 local M={images={},frames={},size=128}
 local lg=love.graphics
-local names={'character','character_diagonal','ball','spikes','drain','shield','boost','lid','magnet','fan','clock'}
+local names={'character','character_diagonal','ball','spikes','drain','shield','boost','lid','magnet','fan','clock','saw','shock','vortex'}
 function M.load()
  for _,name in ipairs(names) do
   local factory=require('src.sprites.'..name)
