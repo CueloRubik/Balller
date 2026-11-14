@@ -24,6 +24,8 @@ jobs:
         run: lua tests/verify_directions.lua
       - name: Validate recovery, upgrades, pulse and rotating objectives
         run: lua tests/polish.lua
+      - name: Test permanent gems, achievements and skin profile
+        run: lua tests/progression.lua
       - name: Test experience and difficulty modes
         run: lua tests/experience.lua
       - name: Test menus and save slot actions
@@ -35,5 +37,5 @@ jobs:
       - name: Upload playable build
         uses: actions/upload-artifact@v4
         with:
-          name: Balller-v6-love
-          path: dist/Balller-v6.love
+          name: Balller-v7-love
+          path: dist/Balller-v7.love

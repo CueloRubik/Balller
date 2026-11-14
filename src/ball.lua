@@ -1,6 +1,13 @@
 local U=require("src.util")
 local A=require("src.arena")
 local B={}
+function B.enforceSpeed(b,speed)
+ speed=speed or b.speed or 245
+ local nx,ny=U.normal(b.vx,b.vy)
+ b.speed=speed
+ b.vx,b.vy=nx*speed,ny*speed
+ return speed
+end
 function B.new() return {x=630,y=313,r=16,vx=-190,vy=145,cooldown=0,portalCooldown=0,guard=0,trail={},spin=0} end
 function B.update(b,dt,onWall)
     b.cooldown=math.max(0,b.cooldown-dt)
@@ -16,12 +23,7 @@ function B.update(b,dt,onWall)
     if b.y<t then b.y=t b.vy=math.abs(b.vy) hit=true end
     if b.y>bot then b.y=bot b.vy=-math.abs(b.vy) hit=true end
     if hit and onWall then onWall(b.x,b.y) end
-    local speed=U.length(b.vx,b.vy)
-    if speed<135 or speed>510 then
-        local nx,ny=U.normal(b.vx,b.vy)
-        speed=U.clamp(speed,155,510)
-        b.vx,b.vy=nx*speed,ny*speed
-    end
+    B.enforceSpeed(b)
     table.insert(b.trail,1,{x=b.x,y=b.y})
     if #b.trail>8 then table.remove(b.trail) end
 end
@@ -36,6 +38,7 @@ function B.hitPlayer(b,p)
     local strength=325
     b.vx=nx*strength+p.vx*.42
     b.vy=ny*strength+p.vy*.42
+    B.enforceSpeed(b)
     b.cooldown=.17
     p.hit=.16
     return true

@@ -14,12 +14,12 @@ function UI.load()
   if file then return g.newFont(file,size) end
   return g.newFont(size)
  end
- UI.fonts.tiny=make(regular,12)
- UI.fonts.small=make(regular,15)
- UI.fonts.body=make(regular,19)
- UI.fonts.medium=make(bold,25)
- UI.fonts.title=make(bold,38)
- UI.fonts.big=make(bold,65)
+ UI.fonts.tiny=make(regular,14)
+ UI.fonts.small=make(regular,17)
+ UI.fonts.body=make(regular,20)
+ UI.fonts.medium=make(bold,27)
+ UI.fonts.title=make(bold,40)
+ UI.fonts.big=make(bold,72)
  UI.fonts.number=make(bold,29)
 end
 function UI.rect(x,y,w,h,r,c)

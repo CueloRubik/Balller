@@ -2,7 +2,7 @@ from pathlib import Path
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 
 root=Path(__file__).resolve().parents[1]
-output=root/'dist'/'Balller-v6.love'
+output=root/'dist'/'Balller-v7.love'
 output.parent.mkdir(exist_ok=True)
 files=[root/'main.lua',root/'conf.lua']
 files.extend(p for directory in ('src','assets') for p in (root/directory).rglob('*') if p.is_file())
@@ -19,5 +19,5 @@ with ZipFile(output) as archive:
     assert archive.testzip() is None
     assert 'main.lua' in archive.namelist()
     assert 'conf.lua' in archive.namelist()
-    assert len([name for name in archive.namelist() if name.endswith('.png')])>=14
+    assert len([name for name in archive.namelist() if name.endswith('.png')])>=21
 print(f'Juego empaquetado: {output.relative_to(root)} ({output.stat().st_size} bytes)')
