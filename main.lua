@@ -10,6 +10,7 @@ local Feedback=require('src.feedback')
 local Sprites=require('src.sprites')
 local Hazards=require('src.hazards')
 local Objects=require('src.objects')
+local Difficulty=require('src.difficulty')
 
 local W,H=1000,680
 local ciFrames=nil
@@ -22,6 +23,7 @@ local buttons={}
 local mouseX,mouseY=0,0
 local slotIntent='new'
 local confirmSlot=1
+local selectedDifficulty=2
 local function resize(w,h)
  scale=math.min(w/W,h/H)
  ox=(w-W*scale)/2
@@ -49,7 +51,7 @@ local function header()
   if Game.state=='playing' or Game.state=='pause' then
    UI.pill(746,25,139,60,'clock','Quedan',string.format('%02d:%02d',math.floor(Game.roundLeft/60),math.ceil(Game.roundLeft%60)),{.9,.97,1},C.blue)
   elseif Game.state=='shop' then
-   UI.pill(746,25,139,60,'bag','Mochila',tostring(Game.inventory[1]+Game.inventory[2]+Game.inventory[3]+Game.inventory[4]+Game.inventory[5]+Game.inventory[6])..'/12',{.9,.97,1},C.blue)
+   UI.pill(746,25,139,60,'bag','Mochila',tostring((function() local n=0 for _,v in ipairs(Game.inventory) do n=n+v end return n end)())..'/12',{.9,.97,1},C.blue)
   else
    UI.pill(746,25,139,60,'trophy','Récord',tostring(math.floor(Save.best)),{.9,.97,1},C.blue)
   end
@@ -59,71 +61,92 @@ local function header()
  end
 end
 local function menu()
- UI.panel(67,119,866,514,30)
- UI.rect(101,154,463,43,14,{.9,.97,.99})
- Icons.draw('spark',122,176,23,C.gold)
- UI.label('UNA PELOTA. MUCHAS RONDAS.',144,165,UI.fonts.small,C.navy)
- UI.label('BALLLER',119,218,UI.fonts.big,C.navy)
- UI.rect(124,300,309,6,3,C.mint)
- UI.label('¡Protégela hasta el final!',124,330,UI.fonts.medium,C.ink)
- UI.label('Compra defensas. Sobrevive. Supera tu récord.',124,370,UI.fonts.small,C.muted)
- UI.rect(625,164,260,290,60,{.91,.98,1})
- Art.mascot(749,309,1.12,Game.t)
- UI.rect(637,460,242,43,15,{1,.96,.84})
- Icons.draw('trophy',662,480,23,C.gold)
- UI.label('¡Cada ronda cuenta!',687,470,UI.fonts.small,C.ink)
- addButton('new',124,411,414,64,'NUEVA PARTIDA',C.mint,'play')
+ UI.rect(61,123,879,512,34,{.61,.83,.87})
+ UI.rect(61,116,879,512,34,C.paper)
+ UI.rect(87,145,488,448,28,{.93,.99,.98})
+ UI.rect(608,142,300,361,62,{.79,.94,1})
+ for i=1,11 do
+  local a=i*2.4+Game.t*.14
+  UI.color(i%2==0 and C.gold or C.mint,.16)
+  love.graphics.circle('fill',740+math.cos(a)*112,302+math.sin(a)*140,5+i%5*2)
+ end
+ Art.mascot(750,323,1.16,Game.t)
+ UI.rect(626,472,257,38,15,{1,.96,.81})
+ Icons.draw('star',652,491,20,C.gold)
+ UI.label('¡La pelota cuenta contigo!',678,479,UI.fonts.small,C.ink)
+ UI.label('BALLLER',123,170,UI.fonts.big,C.navy)
+ UI.rect(127,255,305,7,4,C.mint)
+ UI.label('¡Protege la pelota!',125,277,UI.fonts.medium,C.ink)
+ UI.label('Rondas, defensas y desafíos para todos.',126,319,UI.fonts.small,C.muted)
+ addButton('new',124,372,409,67,'JUGAR',C.mint,'play')
  local saved=false
  for i=1,3 do if Save.hasRun(i) then saved=true break end end
- if saved then
-  addButton('continue',124,490,198,53,'CONTINUAR',C.blue,'save',true)
- else
-  UI.rect(124,490,198,53,14,{.89,.93,.94})
-  UI.label('SIN PARTIDAS',139,509,UI.fonts.small,C.muted)
+ addButton('continue',124,454,198,52,saved and 'MIS PARTIDAS' or 'RANURAS',C.blue,'save',true)
+ addButton('tutorial',335,454,198,52,'APRENDER',C.gold,'help',true)
+ addButton('help',124,519,198,49,'GUÍA',C.lilac,'help',true)
+ addButton('sound',335,519,198,49,Save.sound and 'SONIDO: SÍ' or 'SONIDO: NO',C.blue,Save.sound and 'sound' or 'mute',true)
+ UI.label('Récord '..math.floor(Save.best)..'  ·  '..Save.games..' partidas',640,568,UI.fonts.small,C.ink)
+end
+local function difficultyScreen()
+ UI.panel(68,113,864,535,28)
+ UI.headline('ELIGE TU RETO',112,137,776,UI.fonts.title,C.navy)
+ UI.label('Puedes jugar a tu ritmo. La dificultad queda guardada en tu partida.',128,194,UI.fonts.small,C.muted)
+ for i,mode in ipairs(Difficulty.list) do
+  local col=(i-1)%2
+  local row=math.floor((i-1)/2)
+  local x=100+col*407
+  local y=231+row*162
+  UI.rect(x,y+6,389,144,22,{.66,.77,.8})
+  UI.rect(x,y,389,144,22,({{.89,.98,.92},{.89,.96,1},{1,.95,.86},{1,.90,.93}})[i])
+  UI.rect(x+12,y+13,9,119,4,mode.color)
+  UI.rect(x+31,y+22,66,66,21,mode.color)
+  Icons.draw(({'star','flag','spark','trophy'})[i],x+64,y+55,38,C.paper)
+  UI.label(mode.name,x+108,y+14,UI.fonts.medium,C.navy)
+  UI.label(mode.description,x+108,y+49,UI.fonts.tiny,C.muted,'left',268)
+  UI.label('Rescates por ronda: '..mode.graces,x+110,y+82,UI.fonts.small,C.ink)
+  addButton('difficulty'..i,x+111,y+102,254,34,'ELEGIR',mode.color,'check',true)
  end
- addButton('help',333,490,205,53,'CÓMO JUGAR',C.lilac,'help',true)
- addButton('sound',124,557,198,53,Save.sound and 'SONIDO: SÍ' or 'SONIDO: NO',C.blue,Save.sound and 'sound' or 'mute',true)
- UI.label('Récord: '..math.floor(Save.best),355,565,UI.fonts.body,C.ink)
- UI.label('Partidas: '..Save.games,355,591,UI.fonts.small,C.muted)
+ addButton('back',360,572,280,51,'VOLVER',C.blue,'back',true)
 end
 local function slotsScreen()
  UI.panel(84,118,832,525,28)
- local isNew=slotIntent=='new'
- Icons.draw('save',127,161,31,C.mintDark)
- UI.label(isNew and 'NUEVA PARTIDA' or 'PARTIDAS GUARDADAS',161,137,UI.fonts.title,C.navy)
- UI.label(isNew and 'Elige dónde guardar tu aventura.' or 'Elige una partida para continuar.',129,191,UI.fonts.body,C.muted)
+ Icons.draw('save',127,162,34,C.mintDark)
+ UI.label('MIS PARTIDAS',160,138,UI.fonts.title,C.navy)
+ UI.label('Continúa, elimina o empieza de nuevo cuando quieras.',129,193,UI.fonts.small,C.muted)
  for i=1,3 do
-  local y=224+(i-1)*118
-  UI.rect(120,y+4,762,106,18,{.68,.79,.81})
-  UI.rect(120,y,762,106,18,i%2==1 and {.92,.98,.97} or {.93,.97,1})
-  UI.rect(140,y+17,62,68,19,i%2==1 and C.mint or C.blue)
+  local y=223+(i-1)*118
+  UI.rect(120,y+5,762,107,18,{.65,.77,.8})
+  UI.rect(120,y,762,107,18,i%2==0 and {.91,.97,1} or {.91,.99,.95})
+  UI.rect(140,y+16,63,70,18,i%2==0 and C.blue or C.mint)
   Icons.draw('flag',171,y+51,36,C.paper)
-  UI.label('RANURA '..i,219,y+16,UI.fonts.medium,C.navy)
-  local s=Save.slotInfo(i)
-  if s then
-   UI.label('Ronda '..s.round..'   •   '..math.floor(s.score)..' puntos',219,y+51,UI.fonts.small,C.ink)
-   UI.label(math.floor(s.coins)..' monedas',220,y+77,UI.fonts.small,C.muted)
-   addButton('slot'..i,668,y+26,194,57,isNew and 'REEMPLAZAR' or 'CONTINUAR',isNew and C.gold or C.mint,isNew and 'warning' or 'play',true)
+  UI.label('PARTIDA '..i,220,y+12,UI.fonts.medium,C.navy)
+  local info=Save.slotInfo(i)
+  if info then
+   local mode=Difficulty.get(info.difficulty)
+   UI.label(mode.short..'  |  RONDA '..info.round..'  |  '..math.floor(info.score)..' PTS',221,y+48,UI.fonts.small,C.ink)
+   UI.label(math.floor(info.coins)..' monedas guardadas',222,y+77,UI.fonts.small,C.muted)
+   addButton('slot'..i,566,y+26,172,53,'SEGUIR',C.mint,'play',true)
+   addButton('delete'..i,750,y+26,113,53,'BORRAR',C.red,'warning',true)
   elseif Save.hasRun(i) then
-   UI.label('Guardado dañado. Puedes reemplazarlo.',219,y+58,UI.fonts.small,C.red)
-   if isNew then addButton('slot'..i,668,y+26,194,57,'REEMPLAZAR',C.gold,'warning',true) end
+   UI.label('Este guardado no se puede leer.',221,y+55,UI.fonts.small,C.red)
+   addButton('delete'..i,733,y+24,129,54,'BORRAR',C.red,'warning',true)
   else
-   UI.label('Ranura vacía',219,y+57,UI.fonts.body,C.muted)
-   if isNew then addButton('slot'..i,668,y+26,194,57,'CREAR',C.mint,'play',true) end
+   UI.label('Lista para una partida nueva',221,y+58,UI.fonts.small,C.muted)
+   addButton('slot'..i,665,y+24,197,55,'CREAR',C.mint,'plus',true)
   end
  end
- addButton('back',367,597,266,41,'VOLVER',C.blue,'back',true)
+ addButton('back',367,596,266,42,'VOLVER',C.blue,'back',true)
 end
 local function confirmation()
- UI.color(C.navy,.3)
+ UI.color(C.navy,.42)
  love.graphics.rectangle('fill',0,0,W,H)
  UI.panel(245,190,510,302,27)
- Icons.draw('warning',500,243,58,C.gold)
- UI.headline('¿REEMPLAZAR PARTIDA?',277,287,446,UI.fonts.medium,C.navy)
- UI.label('La partida de la ranura '..confirmSlot..' será reemplazada.',271,339,UI.fonts.body,C.muted,'center',458)
- UI.label('Este cambio no se puede deshacer.',280,372,UI.fonts.small,C.red,'center',440)
- addButton('cancel',281,424,204,50,'CANCELAR',C.blue,'back',true)
- addButton('replace',504,424,214,50,'REEMPLAZAR',C.gold,'check',true)
+ Icons.draw('warning',500,246,53,C.gold)
+ UI.headline('¿BORRAR PARTIDA?',277,286,446,UI.fonts.medium,C.navy)
+ UI.label('Se eliminará la partida '..confirmSlot..' y su progreso.',271,339,UI.fonts.body,C.muted,'center',458)
+ UI.label('Las demás ranuras no cambiarán.',280,373,UI.fonts.small,C.red,'center',440)
+ addButton('cancel',281,426,204,50,'CANCELAR',C.blue,'back',true)
+ addButton('deleteConfirm',504,426,214,50,'ELIMINAR',C.red,'check',true)
 end
 local function help()
  UI.panel(99,107,802,540,26)
@@ -140,82 +163,71 @@ local function help()
  Icons.draw('bag',171,385,29,C.gold)
  UI.label('Compra objetos entre rondas. Úsalos dentro de la cancha.',203,363,UI.fonts.body,C.ink)
  UI.label('Guarda defensas y mejora tus zapatillas entre rondas.',203,392,UI.fonts.small,C.muted)
- UI.label('NUEVOS PELIGROS A PARTIR DE LAS RONDAS 2, 4 Y 6',143,435,UI.fonts.small,C.muted)
- for i,name in ipairs({'spikes','drain','saw','shock','vortex'}) do
-  local x=214+(i-1)*143
+ UI.label('DESCUBRE PELIGROS NUEVOS SEGÚN TU DIFICULTAD',143,435,UI.fonts.small,C.muted)
+ for i,name in ipairs({'spikes','drain','saw','shock','vortex','mallet','laser'}) do
+  local x=161+(i-1)*113
   Sprites.draw(name,x,504,math.floor(Game.t*8)%8+1,62)
-  UI.label(Hazards.names[i],x-52,540,UI.fonts.small,C.ink,'center',104)
+  UI.label(Hazards.names[i],x-52,540,UI.fonts.tiny,C.ink,'center',104)
  end
- addButton('back',336,589,326,48,'ENTENDIDO',C.mint,'check',true)
+ addButton('tutorial',153,589,322,48,'PRACTICAR',C.gold,'play',true)
+ addButton('back',518,589,328,48,'VOLVER',C.blue,'back',true)
 end
 local function shop()
- UI.panel(65,117,870,524,28)
- Icons.draw('bag',111,166,35,C.mintDark)
- UI.label('TIENDA',140,136,UI.fonts.title,C.navy)
- local note=Game.previousRound==0 and 'Prepara la ronda 1' or '¡Ronda '..Game.previousRound..' superada!'
- UI.label(note,390,139,UI.fonts.medium,C.mintDark)
- UI.label('MONEDAS: '..math.floor(Game.coins),740,149,UI.fonts.small,C.ink)
- if Game.winFlash>0 then
-  local pulse=1+math.sin(Game.t*9)*.12
-  Icons.draw('spark',655,164,27*pulse,C.gold)
-  Icons.draw('star',691,137,18,C.gold)
- end
- UI.rect(95,197,810,45,14,{.9,.97,1})
- Icons.draw('star',117,219,24,C.gold)
- local rewardText='Empiezas con 40 monedas y 2 defensas gratis.'
- if Game.previousRound>0 then
-  local base=18+6*Game.previousRound
-  local hits=2*math.min(15,Game.previousHits)
-  local meta=Game.reward-base-hits
-  rewardText='Ronda '..Game.previousRound..': +'..base..' por sobrevivir  +'..hits..' por golpes  +'..meta..' por meta'
- end
- UI.label(rewardText,140,205,UI.fonts.small,C.ink)
- UI.label('Meta: '..Game.objectiveText()..' '..Game.goal()..' = +'..Game.bonus()..' monedas',140,226,UI.fonts.tiny,C.muted)
+ UI.panel(62,111,876,538,28)
+ Icons.draw('bag',112,155,35,C.mintDark)
+ UI.label('TIENDA',142,128,UI.fonts.title,C.navy)
+ UI.label(Difficulty.get(Game.difficulty).short..'  ·  RONDA '..Game.round,380,139,UI.fonts.body,C.navy)
+ UI.rect(734,132,174,41,13,{1,.95,.80})
+ Icons.draw('coin',757,152,25,C.gold)
+ UI.label(tostring(math.floor(Game.coins)),779,142,UI.fonts.medium,C.ink)
+ local rewardText=Game.previousRound==0 and 'Elige las defensas para empezar.' or ('¡Ronda superada!  +'..Game.reward..' monedas')
+ UI.rect(91,192,817,45,14,{.90,.98,.94})
+ Icons.draw('trophy',120,215,26,C.gold)
+ UI.label(rewardText,143,199,UI.fonts.small,C.ink)
+ UI.label('Objetivo: '..Game.objectiveText()..' ('..Game.goal()..')',525,201,UI.fonts.small,C.muted)
  for i,item in ipairs(Objects.types) do
-  local col=(i-1)%3
-  local row=math.floor((i-1)/3)
-  local x=94+col*276
-  local y=259+row*129
-  UI.rect(x,y+5,257,119,16,{.66,.79,.8})
-  UI.rect(x,y,257,119,16,((i%2)==0) and {.94,.98,1} or {.94,.99,.96})
-  Sprites.draw(item.sprite,x+52,y+41,math.floor(Game.t*8)%8+1,79)
-  UI.label(item.name,x+102,y+13,UI.fonts.body,C.ink)
-  UI.label('Tienes '..Game.inventory[i],x+105,y+37,UI.fonts.small,C.muted)
-  UI.label(item.short or '',x+102,y+56,UI.fonts.tiny,C.muted)
-  UI.rect(x+14,y+73,110,35,11,{1,.96,.82})
-  Icons.draw('coin',x+33,y+91,17,C.gold)
-  UI.label(tostring(item.cost),x+51,y+79,UI.fonts.body,C.navy)
-  addButton('buy'..i,x+130,y+73,115,35,'COMPRAR',Game.coins>=item.cost and C.mint or C.blue,'plus',true)
+  local col=(i-1)%4
+  local row=math.floor((i-1)/4)
+  local x=94+col*205
+  local y=253+row*127
+  UI.rect(x,y+5,193,119,17,{.66,.78,.79})
+  UI.rect(x,y,193,119,17,col%2==0 and {.93,.99,.96} or {.93,.97,1})
+  Sprites.draw(item.sprite,x+47,y+39,math.floor(Game.t*9)%8+1,77)
+  UI.label(item.name,x+83,y+17,UI.fonts.small,C.ink)
+  UI.label('Tienes '..(Game.inventory[i] or 0),x+83,y+41,UI.fonts.tiny,C.muted)
+  UI.rect(x+11,y+78,66,31,10,{1,.96,.82})
+  Icons.draw('coin',x+27,y+94,17,C.gold)
+  UI.label(tostring(item.cost),x+41,y+84,UI.fonts.small,C.navy)
+  addButton('buy'..i,x+83,y+78,101,31,'COMPRAR',Game.coins>=item.cost and C.mint or C.blue,'plus',true)
  end
  local cost=Game.upgradeCost()
- UI.rect(105,515,790,38,12,{.90,.97,1})
- Icons.draw('arrows',125,534,23,C.blue)
- UI.label('Zapatillas '..Game.boots..'/3  ·  +20 velocidad por nivel',148,522,UI.fonts.small,C.ink)
- addButton('upgrade',696,518,192,32,cost and ('MEJORAR  $'..cost) or 'MÁXIMO',cost and C.blue or C.mint,'plus',true)
- addButton('home',104,567,230,53,'GUARDAR Y SALIR',C.blue,'save',true)
- addButton('round',524,560,380,64,'JUGAR RONDA '..Game.round,C.mint,'play')
+ UI.rect(106,516,788,37,12,{.89,.96,1})
+ Icons.draw('arrows',125,534,22,C.blue)
+ UI.label('Zapatillas '..Game.boots..'/3  ·  +20 de velocidad por nivel',151,523,UI.fonts.small,C.ink)
+ addButton('upgrade',695,517,190,32,cost and ('MEJORAR $'..cost) or 'MÁXIMO',cost and C.blue or C.mint,'plus',true)
+ addButton('home',105,566,231,55,'GUARDAR Y SALIR',C.blue,'save',true)
+ addButton('round',526,561,378,63,'JUGAR RONDA '..Game.round,C.mint,'play')
 end
 local function inventoryBar()
  for i,item in ipairs(Objects.types) do
-  local x=35+(i-1)*155
-  local y=572
+  local x=35+(i-1)*117
+  local y=573
   local chosen=Objects.selected==i
-  local count=Game.inventory[i]
-  local bg=chosen and {.97,1,.89} or C.paper
-  UI.rect(x,y+5,146,66,15,chosen and C.mintDark or {.66,.8,.8})
-  UI.rect(x,y,146,66,15,bg)
-  if chosen then UI.outline(x+1,y+1,144,64,14,C.mintDark,3) end
-  Sprites.draw(item.sprite,x+32,y+33,math.floor(Game.t*9)%8+1,58,count>0 and 1 or .45)
-  UI.label(item.name,x+62,y+11,UI.fonts.small,count>0 and C.ink or C.muted)
-  UI.rect(x+62,y+35,54,24,8,count>0 and {.88,.98,.91} or {.9,.93,.94})
-  UI.label('x'..count,x+74,y+38,UI.fonts.small,count>0 and C.mintDark or C.muted)
-  UI.rect(x+124,y+7,17,19,6,chosen and C.mintDark or C.blue)
-  UI.label(tostring(i),x+128,y+8,UI.fonts.tiny,C.paper)
-  buttons[#buttons+1]={id='item'..i,rect={x=x,y=y,w=146,h=66}}
+  local count=Game.inventory[i] or 0
+  UI.rect(x,y+5,109,67,14,chosen and C.mintDark or {.67,.78,.80})
+  UI.rect(x,y,109,67,14,chosen and {.96,1,.87} or C.paper)
+  if chosen then UI.outline(x+1,y+1,107,65,13,C.mintDark,2.5) end
+  Sprites.draw(item.sprite,x+46,y+27,math.floor(Game.t*9)%8+1,55,count>0 and 1 or .42)
+  UI.label(item.name,x+2,y+48,UI.fonts.tiny,count>0 and C.ink or C.muted,'center',105)
+  UI.rect(x+78,y+5,25,22,7,count>0 and C.mint or {.69,.75,.76})
+  UI.label(tostring(count),x+80,y+7,UI.fonts.small,C.paper,'center',21)
+  UI.rect(x+6,y+5,17,19,6,chosen and C.mintDark or C.blue)
+  UI.label(tostring(i),x+7,y+7,UI.fonts.tiny,C.paper,'center',15)
+  buttons[#buttons+1]={id='item'..i,rect={x=x,y=y,w=109,h=67}}
  end
  local it=Objects.types[Objects.selected]
- UI.label('CLIC: colocar   •   '..it.desc,36,651,UI.fonts.small,C.ink)
- UI.label('ESPACIO: pulso   •   P: pausa',716,652,UI.fonts.small,C.muted)
+ UI.label('CLIC: '..it.desc,38,651,UI.fonts.small,C.ink)
+ UI.label('ESPACIO: pulso  •  P: pausa',754,651,UI.fonts.small,C.muted)
 end
 local function inGame()
  Art.field()
@@ -235,7 +247,13 @@ local function inGame()
  inventoryBar()
  UI.rect(53,118,265,37,13,{.94,.99,.95})
  Icons.draw('flag',76,136,19,C.mintDark)
- UI.label(Game.objectiveText()..': '..Game.progress()..'/'..Game.goal(),95,124,UI.fonts.small,C.navy)
+ UI.label(Game.tutorial and ('PRÁCTICA '..Game.tutorialStep..'/4') or (Game.objectiveText()..': '..Game.progress()..'/'..Game.goal()),95,124,UI.fonts.small,C.navy)
+ if Game.state=='playing' and not Game.tutorial then
+  local tag=(Game.ball.guard or 0)>0 and 'BURBUJA '..math.ceil(Game.ball.guard)..'s' or ('RESCATES: '..Game.rescues)
+  UI.rect(448,117,249,35,11,{.94,.99,.92})
+  Icons.draw('star',470,135,18,C.gold)
+  UI.label(tag,490,124,UI.fonts.small,C.navy)
+ end
  if Game.state=='playing' then
   UI.rect(715,117,224,35,11,{.92,.97,1})
   Icons.draw('spark',737,134,18,C.blue)
@@ -255,6 +273,11 @@ local function inGame()
   UI.panel(300,193,400,44,14)
   UI.label(Game.notice,310,205,UI.fonts.small,C.ink,'center',380)
  end
+ if Game.tutorial and Game.state=='playing' then
+  UI.panel(278,164,444,65,18)
+  local steps={'','Muévete con WASD o flechas','Acércate y golpea la pelota','Usa ESPACIO cerca de la pelota','Pulsa 1 y haz clic para colocar el escudo'}
+  UI.label(steps[Game.tutorialStep] or '',292,180,UI.fonts.small,C.navy,'center',414)
+ end
  if Game.state=='pause' then
   buttons={}
   UI.color(C.navy,.34)
@@ -262,10 +285,10 @@ local function inGame()
   UI.panel(234,146,532,418,28)
   Icons.draw('pause',500,206,48,C.blue)
   UI.headline('EN PAUSA',270,248,460,UI.fonts.title,C.navy)
-  UI.label('Ranura '..Game.slot..' • Ronda '..Game.round,292,302,UI.fonts.body,C.ink,'center',416)
-  UI.label('Se guarda automáticamente cada 8 segundos.',292,332,UI.fonts.small,C.muted,'center',416)
+  UI.label((Game.tutorial and 'Tutorial sin peligro' or ('Ranura '..Game.slot..' • Ronda '..Game.round)),292,302,UI.fonts.body,C.ink,'center',416)
+  UI.label(Game.tutorial and 'Aprende sin perder vidas.' or 'Se guarda automáticamente cada 8 segundos.',292,332,UI.fonts.small,C.muted,'center',416)
   addButton('resume',314,377,372,56,'CONTINUAR',C.mint,'play')
-  addButton('save',314,446,176,51,'GUARDAR',C.blue,'save',true)
+  if not Game.tutorial then addButton('save',314,446,176,51,'GUARDAR',C.blue,'save',true) end
   addButton('home',508,446,178,51,'SALIR AL MENÚ',C.lilac,'home',true)
  elseif Game.state=='over' then
   buttons={}
@@ -316,27 +339,40 @@ function love.draw()
  buttons={}
  Art.background(Game.t)
  if Game.state=='menu' then header() menu()
+ elseif Game.state=='difficulty' then header() difficultyScreen()
  elseif Game.state=='slots' then header() slotsScreen()
  elseif Game.state=='confirm' then header() slotsScreen() buttons={} confirmation()
  elseif Game.state=='help' then header() help()
+ elseif Game.state=='tutorialDone' then
+  header() UI.panel(205,162,590,372,26)
+  Icons.draw('trophy',500,237,76,C.gold)
+  UI.headline('¡YA SABES JUGAR!',248,279,505,UI.fonts.title,C.navy)
+  UI.label('Aprendiste a moverte, golpear, rescatar y colocar defensas.',235,348,UI.fonts.small,C.ink,'center',530)
+  addButton('toDifficulty',319,427,363,61,'ELEGIR DIFICULTAD',C.mint,'play')
  elseif Game.state=='shop' then header() shop()
  else inGame() end
  love.graphics.pop()
 end
 local function click(id)
  Sound.play('button')
- if id=='new' then slotIntent='new' Game.state='slots'
+ if id=='new' then slotIntent='new' Game.state='difficulty'
  elseif id=='continue' then slotIntent='load' Game.state='slots'
+ elseif id=='toDifficulty' then Game.tutorial=false slotIntent='new' Game.state='difficulty'
+ elseif id=='tutorial' then Game.startTutorial()
  elseif id=='back' then Game.state='menu'
  elseif id=='cancel' then Game.state='slots'
- elseif id=='replace' then Save.clearRun(confirmSlot) Game.newRun(confirmSlot)
+ elseif id=='deleteConfirm' then
+  if Save.clearRun(confirmSlot) then Game.state='slots' else Game.state='slots' Game.notify('No se pudo borrar la partida') end
+ elseif id:sub(1,6)=='delete' then
+  confirmSlot=tonumber(id:sub(7)) or 1 Game.state='confirm'
+ elseif id:sub(1,10)=='difficulty' then
+  selectedDifficulty=tonumber(id:sub(11)) or 2 slotIntent='new' Game.state='slots'
  elseif id:sub(1,4)=='slot' then
   local slot=tonumber(id:sub(5))
-  if slotIntent=='new' then
-   if Save.hasRun(slot) then confirmSlot=slot Game.state='confirm'
-   else Game.newRun(slot) end
-  else
+  if Save.hasRun(slot) then
    if not Game.loadRun(slot) then Game.notify('No se pudo leer la partida') end
+  else
+   Game.newRun(slot,selectedDifficulty)
   end
  elseif id=='help' then Game.state='help'
  elseif id=='play' then slotIntent='new' Game.state='slots'
@@ -347,7 +383,7 @@ local function click(id)
  elseif id=='save' then
   if Game.saveRun() then Game.notify('Partida guardada en ranura '..Game.slot)
   else Game.notify('No se pudo guardar la partida') end
- elseif id=='replay' then Game.newRun(Game.slot)
+ elseif id=='replay' then slotIntent='new' Game.state='difficulty'
  elseif id=='sound' then Save.sound=not Save.sound Sound.enabled=Save.sound Save.store()
  elseif id=='upgrade' then Game.buyUpgrade()
  elseif id:sub(1,3)=='buy' then Game.buy(tonumber(id:sub(4)))
@@ -363,12 +399,13 @@ function love.mousepressed(x,y,button)
 end
 function love.keypressed(key)
  if key=='escape' or key=='p' then
-  if Game.state=='help' or Game.state=='slots' then Game.state='menu'
+  if Game.state=='help' or Game.state=='slots' or Game.state=='difficulty' or Game.state=='tutorialDone' then Game.backToMenu()
   elseif Game.state=='confirm' then Game.state='slots'
   elseif Game.state=='playing' or Game.state=='pause' then Game.togglePause() end
  elseif key=='return' or key=='kpenter' then
-  if Game.state=='menu' then slotIntent='new' Game.state='slots'
-  elseif Game.state=='shop' then Game.startRound() end
+  if Game.state=='menu' then slotIntent='new' Game.state='difficulty'
+  elseif Game.state=='shop' then Game.startRound()
+  elseif Game.state=='tutorialDone' then slotIntent='new' Game.state='difficulty' end
  elseif Game.state=='playing' then
   if key=='space' then Game.pulse() return end
   local n=tonumber(key)
@@ -384,5 +421,5 @@ function love.focus(focused)
  if not focused and Game.state=='playing' then Game.togglePause() end
 end
 function love.quit()
- if Game.state=='playing' or Game.state=='pause' or Game.state=='shop' then Game.saveRun() end
+ if not Game.tutorial and (Game.state=='playing' or Game.state=='pause' or Game.state=='shop') then Game.saveRun() end
 end

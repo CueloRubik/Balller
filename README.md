@@ -1,115 +1,88 @@
-# Balller
+# Balller v6
 
-**Balller v5** es un juego arcade cenital hecho con **LÖVE 2D y Lua**. La misión es proteger una pelota de peligros durante una serie de rondas. Entre rondas, compras defensas que puedes colocar libremente en el terreno. Una partida termina cuando la pelota toca un peligro mortal.
+**Balller** es un arcade cenital para LÖVE 2D (11.4+) y Lua: protege una pelota durante rondas cada vez más difíciles, compra defensas y mejora tu habilidad para superar tu récord. El juego es sin conexión, sin compras reales, sin anuncios y sin mecanismos de pago.
 
-## Jugar
+## Inicio
 
-Requiere LÖVE 11.4 o posterior:
+Abre la carpeta con LÖVE Studio o ejecuta `love .` dentro del proyecto. Para crear el juego instalable por arrastre en LÖVE, ejecuta `python3 tools/package_love.py`; se genera `dist/Balller-v6.love`.
 
-```bash
-love .
-```
+## Menú y partidas
 
-O abre esta carpeta desde LÖVE Studio. Para generar un `.love`, comprime el contenido de la carpeta (con `main.lua` en la raíz) y cambia `.zip` por `.love`.
+- **JUGAR:** elige una de cuatro dificultades y crea una partida en una ranura vacía.
+- **MIS PARTIDAS:** continúa cualquiera de las tres ranuras, o pulsa **BORRAR** y confirma para liberar esa ranura. No se sobrescribe una partida existente de forma silenciosa.
+- **APRENDER:** tutorial práctico, sin riesgos, de movimiento, golpe, pulso de rescate y colocación de defensas. No ocupa ranura.
+- **GUÍA:** instrucciones e ilustraciones de los siete peligros.
+- **SONIDO:** activa o desactiva los efectos.
 
-## Cómo funcionan las partidas
+### Dificultades
 
-1. En el menú, pulsa **Nueva partida** y selecciona una de las **tres ranuras**.
-2. Empiezas en la **tienda** con 40 monedas, un escudo y una tapa gratis.
-3. Compra defensas para tu mochila y pulsa **Jugar ronda 1**.
-4. Controla al personaje con WASD o flechas. Golpea la pelota para desviarla y colócales defensas a los peligros con el ratón.
-5. Cuando el tiempo llega a cero, ganas la ronda y vuelves a la tienda. Los objetos que no usaste siguen en tu mochila.
-6. Cada nueva ronda dura un poco más y añade peligros o aumenta su frecuencia. Si pierdes, la partida finaliza y **se libera solamente su ranura de guardado**.
+| Modo | Para quién | Ayudas |
+| --- | --- | --- |
+| **Novato** | Primera vez, dificultad suave | Pelota lenta, avisos largos, dos rescates por ronda |
+| **Normal** | Equilibrio clásico | Un rescate por ronda, velocidad estándar |
+| **Difícil** | Experiencia arcade | Sin rescates, peligros más rápidos, mejores recompensas |
+| **Experto** | Máximo desafío | Más peligros y velocidad, avisos más breves, mejores recompensas |
 
-No hay monedas sueltas durante una ronda ni compras accidentales al colocar defensas. **Las monedas se ganan únicamente al completar una ronda y se gastan únicamente en la tienda.**
+La dificultad se guarda en la ranura. El progreso y los objetos se mantienen al continuar.
 
-## Monedas y puntuación
+## Economía y rondas
 
-- **Monedas iniciales:** 40.
-- **Recompensa por superar una ronda:** `18 + 6 × número de ronda`.
-- **Bonus por golpes:** `2 × mínimo(golpes de la ronda, 15)`.
-- **Objetivo opcional variable:** alterna entre golpear la pelota, conseguir rebotes en paredes y colocar defensas. El premio crece gradualmente desde **12 monedas**.
-- Ejemplo: en la ronda 1, si golpeas 7 veces, recibes **24 + 14 + 12 = 50 monedas**. En la ronda 2 la meta son los rebotes en paredes.
-- El **score** es independiente de las monedas. Aumenta por tiempo sobrevivido, golpes, rachas, defensas y rondas superadas. Sirve para superar el récord.
+Cada partida empieza con **40 monedas**, un escudo y una tapa. La tienda se abre antes de cada ronda. Puedes almacenar hasta **12 defensas**, máximo **5 de cada clase**. Una unidad se consume únicamente al colocarla correctamente. Comprar no equivale a colocar. Las mejoras de zapatillas aumentan la velocidad y se conservan en esa partida.
 
-| Defensa | Precio | Función |
+La recompensa base por una ronda superada es `18 + 6 × número de ronda`, más hasta 30 monedas por golpes y un premio variable por completar el objetivo. Los modos Difícil y Experto aumentan la recompensa. **Los puntos del récord no se gastan**: las monedas y la puntuación son sistemas separados.
+
+| Objeto | Precio | Función |
 | --- | ---: | --- |
-| Escudo | 22 | Rebota la pelota |
-| Impulso | 30 | La dispara con más fuerza |
-| Tapa | 20 | Cubre una alcantarilla |
-| Imán | 38 | La atrae en su radio |
-| Ventilador | 35 | La empuja en su radio |
-| Reloj | 34 | Reduce su velocidad cercana |
+| Escudo | 22 | Rebotar la pelota |
+| Impulso | 30 | Lanzarla con más fuerza |
+| Tapa | 20 | Cubrir una alcantarilla |
+| Imán | 38 | Atraerla |
+| Ventilador | 35 | Alejarla |
+| Reloj | 34 | Reducir su velocidad |
+| **Burbuja** | **42** | Dar una protección temporal al contacto |
+| **Portal** | **48** | Llevarla a otra zona más segura |
 
-Puedes mejorar tus **zapatillas** hasta el nivel 3 pagando **65, 120 y 175 monedas**. Cada nivel aumenta permanentemente la velocidad del personaje en esa partida.
+### Peligros
 
-Puedes almacenar hasta **12 objetos** en total, con un máximo de **5 de cada tipo**. Solo se consume una unidad al colocarla correctamente. Las defensas colocadas duran un tiempo limitado y desaparecen entre rondas.
-
-## Dificultad y peligros
-
-- **Ronda 1:** pinchos que emergen y alcantarillas que se abren.
-- **Ronda 2:** se desbloquea una **sierra móvil** que rebota contra los bordes.
-- **Ronda 4:** aparece una **descarga eléctrica** intermitente, peligrosa mientras brilla.
-- **Ronda 6:** se incorpora el **remolino**, que cambia la dirección y velocidad de la pelota sin destruirla directamente.
-- Los peligros tienen un aviso previo antes de activarse. Conforme avanzas, aparecen con mayor frecuencia y puede haber más simultáneamente (con un límite de 7).
-- Las rondas duran 28 segundos al empezar y aumentan 2 segundos por ronda, hasta un máximo de 55 segundos.
-
-## Guardado y recuperación
-
-Hay **3 ranuras independientes**. Se guardan automáticamente cada **8 segundos** de juego, cuando empieza o termina una ronda, cuando compras, al pausar y al cerrar la aplicación. También puedes pulsar **Guardar** desde la pausa o **Guardar y salir** desde la tienda.
-
-**Continuar** en el menú restaura la partida, incluyendo ronda, monedas, inventario, posiciones y peligros. Si la ronda estaba en curso, se reabre pausada. La partida perdida deja de poder continuarse. La opción **Reemplazar** pide confirmación antes de borrar otro guardado.
-
-Los guardados se almacenan en la carpeta de datos de LÖVE bajo la identidad `balller`:
-
-- `save.txt`: récord, puntuación histórica, partidas y preferencias de sonido.
-- `partida_1.txt`, `partida_2.txt`, `partida_3.txt`: partidas recuperables.
-
-El lector de guardados valida los campos, utiliza una suma de comprobación para nuevas partidas y no ejecuta código desde archivos de guardado. Se conserva un archivo de respaldo `.bak` para recuperar una ranura dañada. Las partidas anteriores siguen siendo compatibles.
+Pinchos, alcantarillas, sierra móvil, descarga eléctrica, remolino, **martillo intermitente** y **láser giratorio**. Todos se anuncian antes de activarse. Se desbloquean conforme avanzan las rondas; el ritmo depende de la dificultad seleccionada.
 
 ## Controles
 
-| Tecla | Acción |
+| Control | Función |
 | --- | --- |
-| WASD / flechas | Mover al personaje en ocho direcciones |
-| Espacio | Pulso de rescate cercano (10 segundos de recarga) |
-| Clic izquierdo | Colocar la defensa seleccionada |
-| 1–6 | Elegir una defensa de la mochila |
-| Rueda del ratón | Cambiar defensa seleccionada |
-| P / Escape | Pausar o continuar |
-| Enter | Abrir elección de ranura o iniciar ronda desde la tienda |
+| WASD o flechas | Mover personaje en ocho direcciones |
+| Espacio | Pulso de rescate cuando la pelota está cerca |
+| Clic izquierdo | Colocar objeto seleccionado |
+| Teclas 1 a 8 o rueda | Seleccionar defensa |
+| P o Escape | Pausar y continuar |
+| Enter | Abrir dificultades desde el menú o iniciar la ronda desde la tienda |
 
-Se pausa automáticamente al perder el foco de la ventana.
+## Guardados
 
-## Gráficos, sonidos y organización
+Se guardan tres partidas independientes, con copias de seguridad y validación de formato. Se conservan las partidas de las versiones v4 y v5. Se guarda al comprar, completar ronda, pausar, salir y periódicamente durante el juego. Una partida perdida libera su ranura pero no afecta las demás. La configuración y el tutorial completado se guardan aparte.
 
-El juego utiliza 14 hojas PNG independientes con **128 cuadros de animación** (128 × 128 por cuadro) y texturas separadas de personaje, pelota, defensas y peligros. Se incluyen dibujos alternativos por código si no se encuentran las imágenes. La interfaz conserva el aspecto claro y colorido de Balller v3.
+## Código y recursos
 
-- `main.lua`: menús, tienda, ranuras, entrada y dibujo de interfaz.
-- `src/game.lua`: ciclo de rondas, economía y puntuación.
-- `src/hazards.lua`: lógica de los cinco peligros.
-- `src/objects.lua`: seis defensas e inventario.
-- `src/runfile.lua` y `src/save.lua`: serialización segura y tres ranuras.
-- `src/art.lua`, `src/sprites.lua`, `src/icons.lua`, `src/ui.lua`: dibujo y animaciones.
-- `assets/sprites/`: PNG separados por tipo.
-- `tools/create_hazards.py`: genera las tres nuevas hojas PNG (requiere Pillow y CairoSVG solo para regenerar recursos).
-- `tests/`: pruebas de lógica, arranque simulado y sprites.
+- `main.lua`: navegación, menús, HUD y controles.
+- `src/game.lua`: ciclo de partidas, economía y tutorial.
+- `src/difficulty.lua`: cuatro perfiles de dificultad.
+- `src/objects.lua` y `src/hazards.lua`: ocho defensas y siete tipos de peligros.
+- `src/runfile.lua` y `src/save.lua`: guardados compatibles y copias de recuperación.
+- `src/art.lua`, `src/ui.lua`, `src/sprites.lua`: presentación y animaciones.
+- `assets/sprites/`: **18 hojas PNG** separadas con **160 cuadros** de animación.
+- `tests/`: pruebas de jugabilidad, menús, guardados, sprites y regresiones.
 
-## Pruebas
+Todas las imágenes requeridas están en el juego. No es necesario instalar fuentes externas. Hay compatibilidad con fuentes opcionales sin empaquetarlas.
 
-En un equipo con Lua 5.4 y Python 3:
+## Comprobación
 
 ```bash
+lua tests/runfile.lua
 lua tests/smoke.lua
-lua tests/smoke.lua fallback
-lua tests/verify_directions.lua
+lua tests/experience.lua
+lua tests/menu_flow.lua
 python3 tests/check_sprites.py
+python3 tools/package_love.py
 ```
 
-Se pueden ejecutar pruebas de sintaxis con `luac -p`. Estas pruebas no sustituyen una revisión visual dentro de LÖVE.
-
-## Construir versión para compartir
-
-Ejecuta `python3 tools/package_love.py` para generar `dist/Balller-v5.love`. GitHub Actions también comprueba el arranque gráfico con LÖVE y ofrece el `.love` como archivo descargable de la ejecución.
-
-Consulta `docs/PULIDO-V5.md` para conocer las mejoras y `docs/PREPARAR-PUBLICACION.md` para la lista de comprobaciones antes de un lanzamiento oficial.
+GitHub Actions ejecuta análisis de Lua, pruebas automáticas y una prueba gráfica de LÖVE en entorno virtual. Antes de distribuir públicamente: comprobar el juego manualmente en macOS y Windows, probar rondas largas en las cuatro dificultades y revisar `docs/PUBLICACION-V6.md`.

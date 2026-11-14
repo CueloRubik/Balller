@@ -97,13 +97,17 @@ function M.ball(b)
  lg.ellipse('fill',b.x+3,b.y+18,17,8)
  local frame=math.floor(b.spin*1.273)%8+1
  S.draw('ball',b.x,b.y,frame,62)
+ if (b.guard or 0)>0 then
+  col(C.blue,.23) lg.circle('fill',b.x,b.y,37+math.sin(b.guard*7)*2)
+  col(C.paper,.88) lg.setLineWidth(3) lg.circle('line',b.x,b.y,37) lg.setLineWidth(1)
+ end
 end
 function M.hazards(hazards,t)
- local names={'spikes','drain','saw','shock','vortex'}
+ local names={'spikes','drain','saw','shock','vortex','mallet','laser'}
  for _,h in ipairs(hazards) do
   local active=h.age>=h.warning and h.age<h.warning+h.active
   local name=names[h.kind] or 'spikes'
-  local tint=(h.kind==1 or h.kind==3) and C.red or (h.kind==2 and C.gold or (h.kind==4 and {1,.67,.22} or C.lilac))
+  local tint=(h.kind==1 or h.kind==3) and C.red or (h.kind==2 and C.gold or (h.kind==4 and {1,.67,.22} or (h.kind==6 and C.gold or C.lilac)))
   if not active then
    local pulse=math.sin(t*10)^2
    col(tint,.10+pulse*.14)
@@ -113,6 +117,13 @@ function M.hazards(hazards,t)
    lg.circle('line',h.x,h.y,h.r+8)
    lg.setLineWidth(1)
    S.draw(name,h.x,h.y,1,80,.30+.17*pulse)
+   if h.kind==7 then
+    local ang=h.phase
+    col(C.red,.23)
+    lg.setLineWidth(11)
+    lg.line(h.x-math.cos(ang)*120,h.y-math.sin(ang)*120,h.x+math.cos(ang)*120,h.y+math.sin(ang)*120)
+    lg.setLineWidth(1)
+   end
    col(C.paper,.97)
    local progress=math.min(1,h.age/h.warning)
    lg.setLineWidth(4)
@@ -135,9 +146,16 @@ function M.hazards(hazards,t)
     lg.setLineWidth(2)
     lg.circle('line',h.x,h.y,145)
     lg.setLineWidth(1)
-   elseif h.kind==3 then
+   elseif h.kind==3 or h.kind==6 then
     col(C.red,.11)
     lg.circle('fill',h.x,h.y,h.r+13)
+   elseif h.kind==7 then
+    local ang=age*1.35+h.phase
+    col(C.red,.13) lg.setLineWidth(27)
+    lg.line(h.x-math.cos(ang)*120,h.y-math.sin(ang)*120,h.x+math.cos(ang)*120,h.y+math.sin(ang)*120)
+    col(C.paper,.5) lg.setLineWidth(7)
+    lg.line(h.x-math.cos(ang)*120,h.y-math.sin(ang)*120,h.x+math.cos(ang)*120,h.y+math.sin(ang)*120)
+    lg.setLineWidth(1)
    end
    S.draw(name,h.x,h.y,frame,80,alpha)
   end
@@ -151,7 +169,7 @@ function M.objects(objects,t)
   local fade=math.min(1,o.life/1.2)
   col(C.shadow,.14*fade)
   lg.ellipse('fill',o.x+3,o.y+21,o.r*.9,o.r*.35)
-  if o.kind>=4 then
+  if o.kind>=4 and o.kind<=6 then
    local r=o.kind==6 and 125 or 175
    col(o.kind==4 and C.lilac or (o.kind==5 and C.blue or C.gold),o.fx>0 and .17 or .055)
    lg.circle('fill',o.x,o.y,r)

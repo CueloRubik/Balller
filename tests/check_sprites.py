@@ -1,7 +1,7 @@
 from pathlib import Path
 from struct import unpack
 root=Path(__file__).resolve().parent.parent
-expected={'character':16,'character_diagonal':16,'ball':8,'spikes':8,'drain':8,'shield':8,'boost':8,'lid':8,'magnet':8,'fan':8,'clock':8,'saw':8,'shock':8,'vortex':8}
+expected={'character':16,'character_diagonal':16,'ball':8,'spikes':8,'drain':8,'shield':8,'boost':8,'lid':8,'magnet':8,'fan':8,'clock':8,'saw':8,'shock':8,'vortex':8,'mallet':8,'laser':8,'bubble':8,'portal':8}
 for name,count in expected.items():
     path=root/'assets'/'sprites'/(name+'.png')
     data=path.read_bytes()

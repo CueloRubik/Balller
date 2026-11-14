@@ -7,7 +7,9 @@ O.types={
  {name='Tapa',sprite='lid',cost=20,r=32,hits=1,duration=16,short='Cubre una abertura',desc='Cubre una alcantarilla.'},
  {name='Imán',sprite='magnet',cost=38,r=27,hits=99,duration=23,short='Atrae la pelota',desc='Atrae la pelota.'},
  {name='Ventilador',sprite='fan',cost=35,r=27,hits=99,duration=23,short='Aleja la pelota',desc='Empuja la pelota.'},
- {name='Reloj',sprite='clock',cost=34,r=27,hits=99,duration=20,short='Reduce velocidad',desc='Ralentiza la pelota.'}
+ {name='Reloj',sprite='clock',cost=34,r=27,hits=99,duration=20,short='Reduce velocidad',desc='Ralentiza la pelota.'},
+ {name='Burbuja',sprite='bubble',cost=42,r=29,hits=1,duration=30,short='Escudo temporal',desc='Da protección temporal al tocar la pelota.'},
+ {name='Portal',sprite='portal',cost=48,r=28,hits=2,duration=28,short='Salida de emergencia',desc='Teletransporta la pelota a una zona segura.'}
 }
 function O.clear() O.list={} O.selected=1 end
 function O.place(x,y,p,b,hazards)
@@ -81,6 +83,32 @@ function O.collide(b)
      bounced=true
     end
    end
+  elseif o.kind==7 and U.dist(b.x,b.y,o.x,o.y)<b.r+o.r then
+   if (b.guard or 0)<.5 then
+    b.guard=8
+    o.hits=o.hits-1
+    o.fx=.55
+    bounced=true
+   end
+  elseif o.kind==8 and (b.portalCooldown or 0)<=0 and U.dist(b.x,b.y,o.x,o.y)<b.r+o.r then
+   local l,r,t,bot=A.bounds(b.r+30)
+   local targetX=U.clamp(1000-o.x,l,r)
+   local targetY=U.clamp(680-o.y,t,bot)
+   local hazards=require('src.hazards').list
+   for attempt=1,7 do
+    local clear=true
+    for _,h in ipairs(hazards) do
+     if U.dist(targetX,targetY,h.x,h.y)<h.r+b.r+40 then clear=false break end
+    end
+    if clear then break end
+    targetX=U.clamp(l+((attempt*173)%math.max(1,r-l)),l,r)
+    targetY=U.clamp(t+((attempt*127)%math.max(1,bot-t)),t,bot)
+   end
+   b.x,b.y=targetX,targetY
+   b.portalCooldown=1.2
+   o.hits=o.hits-1
+   o.fx=.55
+   bounced=true
   end
  end
  return bounced

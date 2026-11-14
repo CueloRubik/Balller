@@ -2,7 +2,7 @@ from pathlib import Path
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 
 root=Path(__file__).resolve().parents[1]
-output=root/'dist'/'Balller-v5.love'
+output=root/'dist'/'Balller-v6.love'
 output.parent.mkdir(exist_ok=True)
 files=[root/'main.lua',root/'conf.lua']
 files.extend(p for directory in ('src','assets') for p in (root/directory).rglob('*') if p.is_file())
