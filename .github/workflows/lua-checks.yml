@@ -1,7 +1,7 @@
 name: Lua checks
 on:
   push:
-    branches: [main, development]
+    branches: [main, development, 'feature/**']
   pull_request:
 jobs:
   check:
@@ -12,5 +12,9 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y lua5.4
       - name: Check syntax
         run: find . -type f -name '*.lua' -print0 | xargs -0 -n 1 luac -p
-      - name: Smoke test
+      - name: Verify PNG sprites
+        run: python3 tests/check_sprites.py
+      - name: Smoke test with sprite images
         run: lua tests/smoke.lua
+      - name: Smoke test without sprite images
+        run: lua tests/smoke.lua fallback
