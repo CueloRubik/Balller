@@ -10,8 +10,12 @@ local Results=require('src.presentation.round_results')
 local VisualPrefs=require('src.presentation.preferences')
 local VisualSettings=require('src.screens.visual_settings')
 local RunFlow=require('src.presentation.run_flow')
+local Exit=require('src.presentation.exit_flow')
+local C=require('src.theme')
 local purchaseIndex=nil
 local purchaseCooldown=0
+local objectInfo=nil
+local profileSaveClock=0
 
 local W,H=1000,680
 local scale,offsetX,offsetY=1,0,0
@@ -64,7 +68,10 @@ function love.update(dt)
  local previous=Game.state
  Game.update(dt)
  if previous=='playing' and Game.state=='shop' and not Game.tutorial then Results.show(Game) end
- if Progress.dirty and (Game.state=='shop' or Game.state=='menu') then Progress.save() end
+ profileSaveClock=math.max(0,profileSaveClock-dt)
+ if Progress.dirty and (Game.state=='shop' or Game.state=='menu') and profileSaveClock<=0 then
+  if not Game.saveSession() then profileSaveClock=5 end
+ end
  mouseX,mouseY=logical(love.mouse.getPosition())
  if ciFrames then
   ciFrames=ciFrames+1
@@ -83,22 +90,31 @@ function love.draw()
  if Game.state=='menu' then Screens.home()
  elseif Game.state=='difficulty' then Screens.difficulties()
  elseif Game.state=='slots' then Screens.slots()
- elseif Game.state=='confirm' then Screens.slots() buttons={} Screens.confirm(confirmSlot)
+ elseif Game.state=='confirm' then
+  Screens.slots()
+  if not Exit.visible then buttons={} Screens.confirm(confirmSlot) end
  elseif Game.state=='store' then
   Screens.store()
-  if purchaseIndex then buttons={} Screens.confirmPurchase(purchaseIndex) end
+  if purchaseIndex and not Exit.visible then buttons={} Screens.confirmPurchase(purchaseIndex) end
  elseif Game.state=='collection' then Screens.collection()
  elseif Game.state=='achievements' then Screens.achievements()
  elseif Game.state=='settings' then Screens.settings()
  elseif Game.state=='help' then Screens.help()
  elseif Game.state=='shop' then
-  if Results.visible then Screens.roundResults() else Screens.shop() end
+  if Results.visible then Screens.roundResults() else
+   Screens.shop()
+   if objectInfo and not Exit.visible then buttons={} Screens.objectInfo(objectInfo) end
+  end
  elseif Game.state=='tutorialDone' then Screens.tutorialDone()
  else
   Screens.game()
-  if (Game.state=='pause' or Game.state=='over') and not RunFlow.recovery then overlayScreen() end
+  if (Game.state=='pause' or Game.state=='over') and not RunFlow.recovery and not Exit.visible then overlayScreen() end
  end
- if RunFlow.recovery then buttons={} Screens.recovery(RunFlow.recovery) end
+ if Game.saveError and Game.state~='playing' and Game.state~='pause' and Game.state~='shop' and Game.state~='over' and Game.state~='tutorialDone' then
+  UI.singleLine(Game.saveError,30,660,940,UI.fonts.tiny,C.red)
+ end
+ if RunFlow.recovery and not Exit.visible then buttons={} Screens.recovery(RunFlow.recovery) end
+ if Exit.visible then buttons={} Screens.exitError() end
  love.graphics.pop()
 end
 local function click(id)
@@ -114,16 +130,28 @@ local function click(id)
  elseif id=='back' then
   Results.hide() purchaseIndex=nil
   RunFlow.back(Game)
+ elseif id=='exitCancel' then Exit.cancel()
+ elseif id=='exitDiscard' then Exit.approved=true love.event.quit()
+ elseif id=='exitRetry' then
+  if Exit.attempt(Game,Progress,Save) then Exit.approved=true love.event.quit() end
+ elseif id=='infoClose' then objectInfo=nil
+ elseif id=='infoBuy' then
+  if objectInfo then Game.buy(objectInfo) end
+ elseif id:match('^info%d+$') then objectInfo=tonumber(id:sub(5))
+ elseif id=='repeatTutorial' then
+  Results.hide() objectInfo=nil
+  Screens.setPage(1) Game.startTutorial()
  elseif id=='tutorial' then
   Results.hide() purchaseIndex=nil
-  Game.startTutorial()
+  Screens.setPage(1) Game.startTutorial()
  elseif id=='toDifficulty' or id=='replay' then
-  Game.tutorial=false RunFlow.new(Game)
+  if not Game.tutorialSaveFailed or Game.saveTutorial() then Game.tutorial=false RunFlow.new(Game) end
  elseif id:sub(1,10)=='difficulty' then
   RunFlow.chooseDifficulty(Game,tonumber(id:sub(11)) or 2)
  elseif id:sub(1,4)=='slot' then
   Results.hide()
   RunFlow.chooseSlot(Game,tonumber(id:sub(5)))
+  Screens.setPage(Objects.selected<=4 and 1 or 2)
  elseif id=='recoveryOK' then
   RunFlow.recovery=nil
  elseif id:sub(1,6)=='delete' and id~='deleteConfirm' then
@@ -139,7 +167,12 @@ local function click(id)
  elseif id=='reduced' then
   VisualSettings.result(VisualPrefs.setReduced(not VisualPrefs.reduced))
  elseif id=='sound' then
-  Save.sound=not Save.sound Sound.enabled=Save.sound Save.store()
+  local before=Save.sound
+  Save.sound=not Save.sound
+  if not Save.store() then
+   Save.sound=before Game.saveError='No se pudo guardar el ajuste de sonido.'
+  elseif Game.saveError=='No se pudo guardar el ajuste de sonido.' then Game.saveError=nil end
+  Sound.enabled=Save.sound
  elseif id:sub(1,4)=='skin' then
   local ok,message=Progress.unlock(tonumber(id:sub(5)))
   Game.notify(message)
@@ -176,7 +209,7 @@ local function click(id)
  elseif id:sub(1,3)=='buy' then
   Game.buy(tonumber(id:sub(4)))
  elseif id=='round' then
-  Game.startRound()
+  Screens.setPage(1) Game.startRound()
  elseif id=='pause' or id=='resume' then
   Game.togglePause()
  elseif id=='pulse' then
@@ -187,7 +220,7 @@ local function click(id)
  elseif id:sub(1,4)=='item' then
   Objects.selected=tonumber(id:sub(5)) or 1
  elseif id=='save' then
-  Game.saveRun()
+  Game.saveSession()
  elseif id=='home' then
   Results.hide() purchaseIndex=nil
   Game.backToMenu()
@@ -202,14 +235,16 @@ function love.mousepressed(x,y,button)
    if buttons[i].disabled then return end
    local previousState=Game.state
    click(buttons[i].id)
-   if Game.state~=previousState then buttons={} end
+   if Game.state~=previousState then buttons={} objectInfo=nil end
    return
   end
  end
  if Game.state=='playing' then Game.place(x,y) end
 end
 function love.keypressed(key)
+ if Exit.visible then if key=='escape' or key=='p' then Exit.cancel() end return end
  if key=='escape' or key=='p' then
+  if objectInfo then objectInfo=nil return end
   if RunFlow.recovery then RunFlow.recovery=nil return end
   if purchaseIndex then purchaseIndex=nil return end
   if Results.visible then Results.hide() Game.backToMenu() return end
@@ -218,10 +253,12 @@ function love.keypressed(key)
   elseif Game.state=='slots' or Game.state=='difficulty' then RunFlow.back(Game)
   elseif Game.state~='over' then Game.backToMenu() end
  elseif key=='return' or key=='kpenter' then
+  if objectInfo then return end
   if RunFlow.recovery then RunFlow.recovery=nil return end
-  if Game.state=='menu' or Game.state=='tutorialDone' then RunFlow.primary(Game)
+  if Game.state=='menu' or Game.state=='tutorialDone' then
+   if not Game.tutorialSaveFailed or Game.saveTutorial() then RunFlow.primary(Game) end
   elseif Game.state=='shop' then
-   if Results.visible then Results.hide() else Game.startRound() end
+   if Results.visible then Results.hide() else Screens.setPage(1) Game.startRound() end
   end
  elseif Game.state=='playing' then
   if key=='space' then Game.pulse() return end
@@ -242,9 +279,10 @@ function love.focus(focused)
  if not focused and Game.state=='playing' then Game.togglePause() end
 end
 function love.quit()
- Progress.save()
- if not Game.tutorial and (Game.state=='playing' or Game.state=='pause' or Game.state=='shop') then Game.saveRun() end
+ if Exit.approved then return false end
+ return not Exit.attempt(Game,Progress,Save)
 end
+
 for _,value in pairs(arg or {}) do
  if value=='--visual-check' then require('tools.capture_ui').install() break
  elseif value=='--ci-flow' then require('tools.native_flow').install() break end

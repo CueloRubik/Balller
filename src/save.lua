@@ -16,6 +16,7 @@ function M.load()
 end
 function M.store()
  local str=table.concat({math.floor(M.best),math.floor(M.total),math.floor(M.games),M.sound and 1 or 0,M.tutorialDone and 1 or 0},'|')
+ if love.filesystem.read('save.txt')==str then return true end
  return love.filesystem.write('save.txt',str)
 end
 function M.record(score)

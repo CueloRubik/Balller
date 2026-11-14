@@ -1,12 +1,14 @@
 local M={}
 function M.install()
- local oldLoad,oldUpdate=love.load,love.update
+ local oldLoad,oldUpdate,oldQuit=love.load,love.update,love.quit
  local G=require('src.game')
  local P=require('src.progression')
  local Save=require('src.save')
  local Results=require('src.presentation.round_results')
  local Prefs=require('src.presentation.preferences')
  local RunFlow=require('src.presentation.run_flow')
+ local Exit=require('src.presentation.exit_flow')
+ local savedWrite,savedKeyboard,practiceRuns,practiceProfile,practiceGems=nil,nil,nil,nil,nil
  local backupBytes=nil
  local frame,paid=0,nil
  local function click(x,y) love.mousepressed(x,y,1) end
@@ -21,7 +23,7 @@ function M.install()
   G.backToMenu()
  end
  love.update=function(dt)
-  oldUpdate(dt)
+  if frame>=210 and frame<=236 then oldUpdate(.04) else oldUpdate(dt) end
   frame=frame+1
   if frame==5 then click(308,620)
   elseif frame==10 then assert(G.state=='store') click(400,459)
@@ -79,10 +81,59 @@ function M.install()
    assert(love.filesystem.read(RunFlow.recovery.archive)=='CORRUPTO-C1-NATIVE')
    assert(love.filesystem.read('partida_1.txt.bak')==backupBytes)
    click(500,467)
-  elseif frame==135 then assert(not RunFlow.recovery and G.state=='pause') click(500,402)
+  elseif frame==135 then assert(not RunFlow.recovery and G.state=='pause') click(500,360)
   elseif frame==140 then
    assert(G.state=='playing' and P.gems==8 and G.coins==paid)
-   print('NATIVE C1 FLOW OK: store/settings plus read-only slots, archived corruption and acknowledged recovery')
+   G.togglePause()
+   savedWrite=love.filesystem.write
+   love.filesystem.write=function(path,data) if path=='partida_1.txt' then return false end return savedWrite(path,data) end
+   assert(oldQuit()==true and Exit.visible)
+  elseif frame==145 then assert(Exit.visible and G.state=='pause') click(375,466)
+  elseif frame==150 then
+   love.filesystem.write=savedWrite
+   click(385,438)
+  elseif frame==155 then assert(not G.saveError and G.state=='pause') click(615,438)
+  elseif frame==160 then assert(G.state=='menu') click(782,394)
+  elseif frame==165 then assert(G.state=='slots') click(669,204)
+  elseif frame==170 then assert(G.state=='pause') click(500,360)
+  elseif frame==175 then assert(G.state=='playing') G.spawn=10000 G.roundLeft=.001
+  elseif frame==180 then assert(Results.visible) click(616,523)
+  elseif frame==185 then assert(G.state=='shop') click(248,254)
+  elseif frame==190 then
+   love.keypressed('return') assert(G.state=='shop')
+   click(350,539)
+  elseif frame==195 then click(190,620)
+  elseif frame==200 then
+   assert(G.state=='menu')
+   practiceRuns={}
+   for slot=1,3 do practiceRuns[slot]=love.filesystem.read('partida_'..slot..'.txt') end
+   practiceProfile=love.filesystem.read('perfil_balller_v7.txt') practiceGems=P.gems
+  elseif frame==205 then click(800,478)
+  elseif frame==210 then
+   assert(G.tutorial and G.tutorialStep==1)
+   savedKeyboard=love.keyboard.isDown
+   love.keyboard.isDown=function(...) for _,key in ipairs({...}) do if key=='d' then return true end end return false end
+  elseif frame==237 then
+   love.keyboard.isDown=savedKeyboard
+   assert(G.tutorialStep==2 and G.player.x>300)
+   G.ball.x,G.ball.y=G.player.x+20,G.player.y G.ball.cooldown=0
+  elseif frame==240 then assert(G.tutorialStep==3) love.keypressed('space')
+  elseif frame==245 then
+   assert(G.tutorialStep==4)
+   G.ball.x,G.ball.y=770,360 G.player.x,G.player.y=220,270
+   love.keypressed('1') click(460,320)
+  elseif frame==250 then
+   assert(G.state=='tutorialDone' and Save.tutorialDone and P.gems==practiceGems)
+   for slot=1,3 do assert(love.filesystem.read('partida_'..slot..'.txt')==practiceRuns[slot]) end
+   assert(love.filesystem.read('perfil_balller_v7.txt')==practiceProfile)
+  elseif frame==255 then click(380,503)
+  elseif frame==260 then assert(G.tutorial and G.tutorialStep==1) love.keypressed('escape')
+  elseif frame==264 then assert(G.state=='pause') click(615,438)
+  elseif frame==268 then
+   assert(G.state=='menu' and P.gems==practiceGems)
+   for slot=1,3 do assert(love.filesystem.read('partida_'..slot..'.txt')==practiceRuns[slot]) end
+   assert(love.filesystem.read('perfil_balller_v7.txt')==practiceProfile)
+   print('NATIVE C2 FLOW OK: recovery, quit veto/retry, object help and complete/repeat/skip practice with unchanged runs/profile')
    love.event.quit(0)
   end
  end
