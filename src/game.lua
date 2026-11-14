@@ -13,6 +13,7 @@ local Progress=require('src.progression')
 local Collectibles=require('src.collectibles')
 local Rounds=require('src.rounds')
 local Economy=require('src.economy.rules')
+local Rewards=require('src.reward_transaction')
 local Costs=Economy.config
 local G={state='menu',winFlash=0,slot=nil,score=0,coins=0,time=0,spawn=0,t=0,notice='',noticeT=0,reason='',shake=0,round=1,roundLeft=0,roundDuration=0,roundHits=0,wallBounces=0,placed=0,boots=0,pulseCooldown=0,pulseVisual=0,autosaveClock=0,difficulty=2,rescues=0,rescueInvuln=0,tutorial=false,tutorialStep=0,tutorialWalk=0,roundStars=0,gemsReward=0,reward=0,previousRound=0,previousHits=0,inventory={0,0,0,0,0,0}}
 local function copyArray(list)
@@ -73,6 +74,7 @@ local function commitPurchase(before,after)
  return true
 end
 function G.buyUpgrade()
+ if G.rewardsPending() then return false end
  if G.state~='shop' then return false end
  local cost=G.upgradeCost()
  if not cost then G.notify('Mejora al máximo nivel') return false end
@@ -104,7 +106,28 @@ function G.snapshot()
   inventory={G.inventory[1],G.inventory[2],G.inventory[3],G.inventory[4],G.inventory[5],G.inventory[6],G.inventory[7],G.inventory[8]},hazards=copyArray(H.list),objects=copyArray(O.list)
  }
 end
+function G.rewardsPending() return G.pendingReward~=nil or Rewards.pending() or Progress.purchasePending() end
+function G.flushRewards()
+ if not Progress.resolvePurchase() then
+  G.saveError='No se pudo revisar la compra de apariencia pendiente.'
+  return false
+ end
+ if not G.rewardsPending() then return true end
+ local pending=G.pendingReward
+ local ok,reason
+ if pending then ok,reason=Rewards.commit(pending.slot,pending.run,pending.profile,pending.receipt)
+ else ok,reason=Rewards.recover() end
+ G.rewardRecoveryError=reason
+ if not ok then
+  G.saveError=reason=='invalid' and 'El registro de premios está dañado. Los archivos se conservan.' or 'No se pudieron guardar los premios. Reintenta para continuar.'
+  return false
+ end
+ if pending then Progress.dirty=false else Progress.load() end
+ G.pendingReward=nil G.saveError=nil
+ return true
+end
 function G.saveRun()
+ if not G.flushRewards() then return false end
  if not G.slot or G.tutorial then return false end
  local snapshot=G.snapshot()
  local ok=snapshot~=nil and Save.storeRun(snapshot,G.slot)
@@ -116,6 +139,7 @@ function G.saveRun()
  return ok
 end
 function G.saveSession()
+ if not G.flushRewards() then return false end
  local active=G.state=='shop' or G.state=='playing' or G.state=='pause'
  local ok=true
  if active and not G.tutorial then ok=G.saveRun() end
@@ -141,6 +165,7 @@ function G.saveTutorial()
 end
 
 function G.newRun(slot,difficulty)
+ if not G.flushRewards() then return false end
  if type(slot)~='number' or slot%1~=0 or slot<1 or slot>3 then return false end
  G.difficulty=Difficulty.get(difficulty).id
  G.tutorial=false
@@ -164,6 +189,7 @@ function G.newRun(slot,difficulty)
  G.pulseVisual=0
  G.autosaveClock=0
  G.reward=0
+ G.rewardDetails=nil
  G.gemsReward=0
  G.roundStars=0
  G.winFlash=0
@@ -193,6 +219,7 @@ function G.newRun(slot,difficulty)
  return true
 end
 function G.loadRun(slot)
+ if not G.flushRewards() then return false,'reward_pending' end
  local s,status,detail=Save.loadRun(slot)
  if not s then return false,status end
  G.slot=slot
@@ -216,7 +243,9 @@ function G.loadRun(slot)
  G.pulseVisual=0
  G.autosaveClock=0
  G.reward=s.reward
- G.gemsReward=0
+ local receipt=Rewards.readReceipt(love.filesystem.read('partida_'..slot..'.txt.reward'),slot,s)
+ G.gemsReward=receipt and receipt.gems or 0
+ G.rewardDetails=receipt
  G.winFlash=0
  G.previousRound=s.previousRound
  G.previousHits=s.previousHits
@@ -242,6 +271,7 @@ function G.loadRun(slot)
  return true,status,detail
 end
 function G.startRound()
+ if not G.flushRewards() then return false end
  if G.state~='shop' then return false end
  G.state='playing'
  G.rescues=Difficulty.get(G.difficulty).graces+G.roundMode().rescue
@@ -272,13 +302,16 @@ function G.startRound()
  return true
 end
 function G.endRound()
- if G.state~='playing' then return end
+ if G.state~='playing' or G.rewardsPending() then return end
  local played=G.round
  local hits=G.roundHits
  local goal=G.progress()>=G.goal() and G.bonus() or 0
- G.reward=Economy.roundReward(played,hits,goal,Difficulty.get(G.difficulty).bonus*G.roundMode().reward,G.coins).credited
+ local multiplier=Difficulty.get(G.difficulty).bonus*G.roundMode().reward
+ G.rewardDetails=Economy.roundReward(played,hits,goal,multiplier,G.coins)
+ G.rewardDetails.multiplier=multiplier
+ G.reward=G.rewardDetails.credited
  local previousGems,previousCoins=Progress.gems,G.coins
- Progress.awardRound(played,G.difficulty)
+ Progress.awardRound(played,G.difficulty,true)
  G.gemsReward=Progress.gems-previousGems
  G.coins=G.coins+G.reward
  G.reward=G.coins-previousCoins
@@ -298,6 +331,9 @@ function G.endRound()
  Feedback.resetCombo()
  FX.burst(G.ball.x,G.ball.y,C.gold,30)
  Sound.play('round')
+ local run=G.snapshot()
+ G.pendingReward={slot=G.slot,run=run,profile=Progress.export(),receipt=Rewards.receipt(G.slot,run,G.gemsReward,G.rewardDetails)}
+ Rewards.busy=true
  G.saveSession()
 end
 function G.finish(reason)
@@ -312,6 +348,7 @@ function G.finish(reason)
  Sound.play('lose')
 end
 function G.buy(index)
+ if G.rewardsPending() then return false end
  if G.state~='shop' then return false end
  local ok,reason,cost=Economy.canBuy(G,index)
  if not ok then G.notify(reason) Sound.play('warn') return false end
@@ -342,6 +379,7 @@ function G.place(x,y)
  return false
 end
 function G.startTutorial()
+ if not G.flushRewards() then return false end
  G.slot=nil
  G.difficulty=1
  G.tutorial=true

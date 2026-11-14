@@ -1,7 +1,7 @@
 local M={visible=false,data=nil}
 function M.show(game)
  if game.state~='shop' or (game.previousRound or 0)<1 then return false end
- M.data={round=game.previousRound,hits=game.previousHits or 0,coins=game.reward or 0,gems=game.gemsReward or 0,score=math.floor(game.score),nextRound=game.round}
+ M.data={round=game.previousRound,hits=game.previousHits or 0,coins=game.reward or 0,gems=game.gemsReward or 0,score=math.floor(game.score),nextRound=game.round,detail=game.rewardDetails}
  M.visible=true
  return true
 end

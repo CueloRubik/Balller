@@ -1,6 +1,6 @@
 package.path='./?.lua;./?/init.lua;'..package.path
 local files={}
-love={filesystem={read=function(path) return files[path] end,write=function(path,s) files[path]=s return true end},math={random=math.random}}
+love={filesystem={remove=function(path) files[path]=nil return true end,read=function(path) return files[path] end,write=function(path,s) files[path]=s return true end},math={random=math.random}}
 local P=require('src.progression')
 assert(P.gems==0 and P.skin==1)
 assert(P.awardRound(1,1)==0)

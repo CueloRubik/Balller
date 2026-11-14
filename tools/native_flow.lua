@@ -8,6 +8,7 @@ function M.install()
  local Prefs=require('src.presentation.preferences')
  local RunFlow=require('src.presentation.run_flow')
  local Exit=require('src.presentation.exit_flow')
+ local Rewards=require('src.reward_transaction')
  local savedWrite,savedKeyboard,practiceRuns,practiceProfile,practiceGems=nil,nil,nil,nil,nil
  local backupBytes=nil
  local frame,paid=0,nil
@@ -16,6 +17,7 @@ function M.install()
   love.filesystem.setIdentity('balller_ci_flow_v8',true)
   for slot=1,3 do Save.clearRun(slot) end
   for _,file in ipairs({'perfil_balller_v7.txt','perfil_balller_v7.txt.bak','save.txt',Prefs.file}) do love.filesystem.remove(file) end
+  assert(Rewards.recover())
   oldLoad()
   P.gems=12 P.owned={true,false,false,false} P.skin=1
   assert(P.save())
@@ -158,7 +160,24 @@ function M.install()
    assert(G.coins==paid-22 and G.inventory[1]==practiceRuns+1)
    assert(not love.filesystem.getInfo('partida_1.txt.purchase'))
    assert(G.loadRun(1) and G.coins==paid-22 and G.inventory[1]==practiceRuns+1)
-   print('NATIVE D1 FLOW OK: complete C2 circuit plus interrupted purchase rollback and durable retry')
+   P.gems=0 P.rounds=9 P.best={0,0,0,0} assert(P.save())
+   G.round=3 assert(G.startRound()) G.roundHits=4 G.placed=1
+   savedWrite=love.filesystem.write
+   love.filesystem.write=function(path,data) if path=='perfil_balller_v7.txt' then return false end return savedWrite(path,data) end
+   G.endRound()
+  elseif frame==308 then
+   assert(G.pendingReward and G.state=='shop' and P.gems==4)
+   paid=G.coins
+   assert(not G.buy(1) and not G.startRound() and oldQuit()==true and Exit.visible)
+   Exit.cancel()
+  elseif frame==313 then
+   love.filesystem.write=savedWrite
+   love.draw() click(600,455)
+  elseif frame==318 then
+   assert(not G.rewardsPending() and G.coins==paid and P.gems==4 and P.rounds==10)
+   assert(G.loadRun(1) and G.gemsReward==4 and G.rewardDetails.objective==24)
+   assert(Results.show(G) and Results.data.gems==4)
+   print('NATIVE D2 FLOW OK: C2/D1 circuit, interrupted reward recovery, no duplicate payment and persisted breakdown')
    love.event.quit(0)
   end
  end

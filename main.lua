@@ -51,7 +51,7 @@ function love.load()
  Art.load()
  Save.load()
  VisualPrefs.load()
- Progress.load()
+ if Game.flushRewards() then Progress.load() end
  Sound.load()
  Sound.enabled=Save.sound
  love.math.setRandomSeed(os.time())
@@ -113,13 +113,16 @@ function love.draw()
  if Game.saveError and Game.state~='playing' and Game.state~='pause' and Game.state~='shop' and Game.state~='over' and Game.state~='tutorialDone' then
   UI.singleLine(Game.saveError,30,660,940,UI.fonts.tiny,C.red)
  end
- if RunFlow.recovery and not Exit.visible then buttons={} Screens.recovery(RunFlow.recovery) end
+ if Game.rewardsPending() and not Exit.visible then buttons={} Screens.rewardPending() end
+ if RunFlow.recovery and not Game.rewardsPending() and not Exit.visible then buttons={} Screens.recovery(RunFlow.recovery) end
  if Exit.visible then buttons={} Screens.exitError() end
  love.graphics.pop()
 end
 local function click(id)
  Sound.play('button')
- if id=='new' then
+ if id=='rewardRetry' then Game.saveSession()
+ elseif id=='rewardClose' then love.event.quit()
+ elseif id=='new' then
   Results.hide() purchaseIndex=nil
   RunFlow.new(Game)
  elseif id=='continue' or id=='manageRuns' then
@@ -202,6 +205,7 @@ local function click(id)
   end
  elseif id=='challengeAchievements' then Screens.hub.challengeTab='achievements'
  elseif id=='challengeMilestones' then Screens.hub.challengeTab='milestones'
+ elseif id=='lastReward' then Results.show(Game)
  elseif id=='resultsContinue' then Results.hide()
  elseif id=='resultsHome' then Results.hide() Game.backToMenu()
  elseif id=='upgrade' then
@@ -242,6 +246,10 @@ function love.mousepressed(x,y,button)
  if Game.state=='playing' then Game.place(x,y) end
 end
 function love.keypressed(key)
+ if not Exit.visible and Game.rewardsPending() then
+  if key=='return' or key=='kpenter' then Game.saveSession() end
+  return
+ end
  if Exit.visible then if key=='escape' or key=='p' then Exit.cancel() end return end
  if key=='escape' or key=='p' then
   if objectInfo then objectInfo=nil return end

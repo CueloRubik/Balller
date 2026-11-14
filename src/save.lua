@@ -1,4 +1,5 @@
 local Runfile=require('src.runfile')
+local Rewards=require('src.reward_transaction')
 local M={best=0,total=0,games=0,sound=true,tutorialDone=false}
 local function safeNum(v) return math.max(0,tonumber(v) or 0) end
 function M.load()
@@ -41,6 +42,7 @@ function M.hasRun(slot)
  return path~=nil and (love.filesystem.getInfo(path)~=nil or love.filesystem.getInfo(path..'.bak')~=nil or love.filesystem.getInfo(path..'.purchase')~=nil)
 end
 function M.storeRun(data,slot)
+ if Rewards.pending() then return false end
  local path=slotPath(slot)
  local encoded=Runfile.encode(data)
  if not path or not encoded or not Runfile.decode(encoded) then return false end
@@ -102,6 +104,7 @@ function M.resolvePurchase(slot)
  return true,{slot=slot,kind='purchase',diagnostic=diagnostic}
 end
 function M.storePurchase(before,after,slot)
+ if Rewards.pending() then return false end
  local path=slotPath(slot)
  if not path then return false end
  local old,new=Runfile.encode(before),Runfile.encode(after)
@@ -117,6 +120,7 @@ function M.storePurchase(before,after,slot)
  return true
 end
 function M.loadRun(slot)
+ if Rewards.pending() then return nil,'reward_pending' end
  local path=slotPath(slot)
  if not path then return nil,'invalid' end
  local purchase
@@ -138,8 +142,12 @@ function M.loadRun(slot)
  return parsed,'recovered',{archive=archived,slot=slot}
 end
 function M.clearRun(slot)
+ if Rewards.pending() then return false,'reward_pending' end
  local path=slotPath(slot)
  if not path then return false end
+ for _,suffix in ipairs({'.reward','.reward.bak'}) do
+  if love.filesystem.getInfo(path..suffix) and not love.filesystem.remove(path..suffix) then return false,'receipt_remove_failed' end
+ end
  if love.filesystem.getInfo(path) and not love.filesystem.remove(path) then return false,'primary_remove_failed' end
  if love.filesystem.getInfo(path..'.bak') and not love.filesystem.remove(path..'.bak') then return false,'backup_remove_failed' end
  if love.filesystem.getInfo(path..'.purchase') and not love.filesystem.remove(path..'.purchase') then return false,'purchase_remove_failed' end
