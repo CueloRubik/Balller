@@ -88,32 +88,47 @@ function M.ball(b)
  S.draw('ball',b.x,b.y,frame,62)
 end
 function M.hazards(hazards,t)
+ local names={'spikes','drain','saw','shock','vortex'}
  for _,h in ipairs(hazards) do
   local active=h.age>=h.warning and h.age<h.warning+h.active
-  local name=h.kind==1 and 'spikes' or 'drain'
+  local name=names[h.kind] or 'spikes'
+  local tint=(h.kind==1 or h.kind==3) and C.red or (h.kind==2 and C.gold or (h.kind==4 and {1,.67,.22} or C.lilac))
   if not active then
-   local c=h.kind==1 and C.red or C.gold
-   col(c,.13+math.sin(t*11)^2*.14)
-   lg.circle('fill',h.x,h.y,h.r+13+math.sin(t*8)*2)
-   col(c,.88)
+   local pulse=math.sin(t*10)^2
+   col(tint,.10+pulse*.14)
+   lg.circle('fill',h.x,h.y,h.r+17+math.sin(t*8)*2)
+   col(tint,.86)
    lg.setLineWidth(4)
    lg.circle('line',h.x,h.y,h.r+8)
    lg.setLineWidth(1)
-   if h.kind==2 then S.draw('drain',h.x,h.y,1,75,.6) end
-   if h.kind==1 and h.age/h.warning>.5 then
-    S.draw('spikes',h.x,h.y,1,76,((h.age/h.warning)-.5)*1.5)
-   end
-   col(C.paper,.96)
-   local r=h.r+17
+   S.draw(name,h.x,h.y,1,80,.30+.17*pulse)
+   col(C.paper,.97)
+   local progress=math.min(1,h.age/h.warning)
    lg.setLineWidth(4)
-   lg.arc('line','open',h.x,h.y,r,-math.pi/2,-math.pi/2+(h.age/h.warning)*math.pi*2)
+   lg.arc('line','open',h.x,h.y,h.r+17,-math.pi/2,-math.pi/2+progress*math.pi*2)
    lg.setLineWidth(1)
   else
    local age=h.age-h.warning
-   local frame=math.min(8,math.floor(age*12)+1)
+   local frame=h.kind<=2 and math.min(8,math.floor(age*12)+1) or (math.floor(t*10)%8+1)
    if h.kind==1 then frame=math.min(8,frame+2) end
-   local a=math.min(1,(h.warning+h.active-h.age)/.32)
-   S.draw(name,h.x,h.y,frame,80,a)
+   local alpha=math.min(1,(h.warning+h.active-h.age)/.35)
+   if h.kind==4 then
+    local charged=((age+h.phase)%2.3)<1.3
+    if not charged then alpha=alpha*.47 end
+    col(charged and C.red or C.blue,charged and .12 or .08)
+    lg.circle('fill',h.x,h.y,h.r+13)
+   elseif h.kind==5 then
+    col(C.lilac,.09+.05*math.sin(t*5)^2)
+    lg.circle('fill',h.x,h.y,145)
+    col(C.lilac,.28)
+    lg.setLineWidth(2)
+    lg.circle('line',h.x,h.y,145)
+    lg.setLineWidth(1)
+   elseif h.kind==3 then
+    col(C.red,.11)
+    lg.circle('fill',h.x,h.y,h.r+13)
+   end
+   S.draw(name,h.x,h.y,frame,80,alpha)
   end
  end
 end
