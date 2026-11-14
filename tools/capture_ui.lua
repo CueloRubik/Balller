@@ -6,14 +6,16 @@ function M.install()
  local P=require('src.progression')
  local Prefs=require('src.presentation.preferences')
  local Assets=require('src.presentation.assets')
+ local RunFlow=require('src.presentation.run_flow')
  local sizes={{1000,680},{800,600},{1280,720},{1366,768},{1920,1080}}
- local states={'menu','difficulty','slots','shop','collection','achievements','settings','playing','pause','over','store','purchase','milestones','results','store_empty','collection_owned','arena_taller','arena_ciudad','playing_notice','playing_tutorial','playing_reduced','playing_fallback','playing_extreme','playing_edge','components'}
+ local states={'menu','difficulty','slots','shop','collection','achievements','settings','playing','pause','over','store','purchase','milestones','results','store_empty','collection_owned','arena_taller','arena_ciudad','playing_notice','playing_tutorial','playing_reduced','playing_fallback','playing_extreme','playing_edge','slots_new','slots_full','slots_backup','slots_damaged','slots_delete','slots_delete_error','slots_recovered','components'}
  local sizeIndex,stateIndex,frames,pending=1,1,0,false
  local function setup()
   local width,height=unpack(sizes[sizeIndex])
   assert(love.window.setMode(width,height,{resizable=true,vsync=0,msaa=0}))
   love.resize(width,height)
   love.keypressed('escape')
+  for slot=1,3 do Save.clearRun(slot) end
   assert(G.newRun(1,2))
   P.gems=12 P.plays=0 P.rounds=0 P.best={0,0,0,0} P.owned={true,false,false,false} P.skin=1
   G.coins=160
@@ -27,6 +29,7 @@ function M.install()
   local Results=require('src.presentation.round_results')
   local Hub=require('src.screens.hub')
   Results.hide() Hub.challengeTab='achievements' Hub.message=''
+  RunFlow.mode='continue' RunFlow.message='' RunFlow.recovery=nil RunFlow.selectedSlot=nil
   local state=states[stateIndex]
   Prefs.arena='patio' Prefs.reduced=false
   require('src.screens.visual_settings').message=''
@@ -40,6 +43,27 @@ function M.install()
    end
    require('src.hazards').list={hazard(1,460,240,29,1.2),hazard(3,740,417,30,3),hazard(5,345,407,34,3)}
    require('src.objects').list={{kind=1,x=174,y=400,r=32,hits=7,life=18,fullLife=32,phase=0,fx=.15},{kind=5,x=780,y=260,r=27,hits=99,life=18,fullLife=23,phase=0,fx=0}}
+  end
+  if state:match('^slots_') then
+   G.state='slots'
+   if state=='slots_new' then RunFlow.mode='new' RunFlow.difficulty=2 end
+   if state=='slots_full' then
+    assert(G.newRun(2,3) and G.newRun(3,4)) G.state='slots' RunFlow.mode='new'
+   end
+   if state=='slots_backup' or state=='slots_recovered' then
+    local good=assert(love.filesystem.read('partida_1.txt'))
+    assert(love.filesystem.write('partida_1.txt.bak',good))
+    assert(love.filesystem.write('partida_1.txt','CORRUPTO'))
+    if state=='slots_recovered' then assert(RunFlow.chooseSlot(G,1)) end
+   end
+   if state=='slots_damaged' then
+    assert(love.filesystem.write('partida_1.txt','CORRUPTO'))
+    love.filesystem.remove('partida_1.txt.bak')
+   end
+   if state=='slots_delete' or state=='slots_delete_error' then
+    G.state='confirm'
+    if state=='slots_delete_error' then RunFlow.message='No se pudo borrar todo. Los archivos restantes se conservan.' end
+   end
   end
   if state=='store_empty' then G.state='store' P.gems=0 end
   if state=='collection_owned' then G.state='collection' P.owned[2]=true P.skin=2 end

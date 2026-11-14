@@ -92,3 +92,5 @@ La primera parte visual de B incorpora atlas PNG, 32 iconos, Nunito con licencia
 B2 separa Tienda de gemas/Colección, reúne logros e hitos en Retos y muestra un resumen al superar una ronda. Ver [alcance y capturas B2](docs/V8-FASE-B2.md). Paquete actual de desarrollo: `python3 tools/package_love.py --output Balller-v8-B2.love`. La prueba nativa del circuito completo con archivos reales se ejecuta desde el checkout con `love . --ci-flow`.
 
 B3 añade canchas PNG Patio/Taller/Ciudad, HUD fuera del área jugable y preferencias visuales guardadas. Ver [alcance y capturas B3](docs/V8-FASE-B3.md). Paquete actual de desarrollo: `python3 tools/package_love.py --output Balller-v8-B3.love`. Pruebas nuevas: `lua tests/b3_preferences.lua` y `lua tests/b3_hud.lua`.
+
+C1 separa Nueva/Continuar y muestra recuperación de copias sin modificar archivos al dibujar las ranuras. Ver [alcance C1](docs/V8-FASE-C1.md) y [progreso general](docs/PROGRESO-V8.md). Paquete actual: `python3 tools/package_love.py --output Balller-v8-C1.love`.

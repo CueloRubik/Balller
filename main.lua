@@ -9,6 +9,7 @@ local Screens=require('src.v7screens')
 local Results=require('src.presentation.round_results')
 local VisualPrefs=require('src.presentation.preferences')
 local VisualSettings=require('src.screens.visual_settings')
+local RunFlow=require('src.presentation.run_flow')
 local purchaseIndex=nil
 local purchaseCooldown=0
 
@@ -16,7 +17,6 @@ local W,H=1000,680
 local scale,offsetX,offsetY=1,0,0
 local buttons={}
 local mouseX,mouseY=0,0
-local selectedDifficulty=2
 local confirmSlot=1
 local ciFrames=nil
 local function ciSmokeRequested()
@@ -96,45 +96,44 @@ function love.draw()
  elseif Game.state=='tutorialDone' then Screens.tutorialDone()
  else
   Screens.game()
-  if Game.state=='pause' or Game.state=='over' then overlayScreen() end
+  if (Game.state=='pause' or Game.state=='over') and not RunFlow.recovery then overlayScreen() end
  end
+ if RunFlow.recovery then buttons={} Screens.recovery(RunFlow.recovery) end
  love.graphics.pop()
 end
 local function click(id)
  Sound.play('button')
  if id=='new' then
   Results.hide() purchaseIndex=nil
-  Game.state='difficulty'
- elseif id=='continue' then
-  Game.state='slots'
+  RunFlow.new(Game)
+ elseif id=='continue' or id=='manageRuns' then
+  RunFlow.continue(Game)
  elseif id=='menu' or id=='store' or id=='collection' or id=='achievements' or id=='settings' or id=='help' then
   Results.hide() purchaseIndex=nil
   Game.state=id
  elseif id=='back' then
   Results.hide() purchaseIndex=nil
-  Game.backToMenu()
+  RunFlow.back(Game)
  elseif id=='tutorial' then
   Results.hide() purchaseIndex=nil
   Game.startTutorial()
  elseif id=='toDifficulty' or id=='replay' then
-  Game.tutorial=false Game.state='difficulty'
+  Game.tutorial=false RunFlow.new(Game)
  elseif id:sub(1,10)=='difficulty' then
-  selectedDifficulty=tonumber(id:sub(11)) or 2
-  Game.state='slots'
+  RunFlow.chooseDifficulty(Game,tonumber(id:sub(11)) or 2)
  elseif id:sub(1,4)=='slot' then
   Results.hide()
-  local slot=tonumber(id:sub(5))
-  if Save.hasRun(slot) then
-   if not Game.loadRun(slot) then Game.notify('Guardado dañado') end
-  else
-   Game.newRun(slot,selectedDifficulty)
-  end
+  RunFlow.chooseSlot(Game,tonumber(id:sub(5)))
+ elseif id=='recoveryOK' then
+  RunFlow.recovery=nil
  elseif id:sub(1,6)=='delete' and id~='deleteConfirm' then
-  confirmSlot=tonumber(id:sub(7)) or 1 Game.state='confirm'
+  confirmSlot=tonumber(id:sub(7)) or 1 RunFlow.message='' Game.state='confirm'
  elseif id=='cancel' then
-  Game.state='slots'
+  RunFlow.message='' Game.state='slots'
  elseif id=='deleteConfirm' then
-  Save.clearRun(confirmSlot) Game.state='slots'
+  if Save.clearRun(confirmSlot) then
+   RunFlow.message='Partida eliminada.' Game.state='slots'
+  else RunFlow.message='No se pudo borrar todo. Los archivos restantes se conservan.' end
  elseif id:sub(1,6)=='arena:' then
   VisualSettings.result(VisualPrefs.setArena(id:sub(7)))
  elseif id=='reduced' then
@@ -201,7 +200,9 @@ function love.mousepressed(x,y,button)
   local r=buttons[i].rect
   if x>=r.x and x<=r.x+r.w and y>=r.y and y<=r.y+r.h then
    if buttons[i].disabled then return end
+   local previousState=Game.state
    click(buttons[i].id)
+   if Game.state~=previousState then buttons={} end
    return
   end
  end
@@ -209,13 +210,16 @@ function love.mousepressed(x,y,button)
 end
 function love.keypressed(key)
  if key=='escape' or key=='p' then
+  if RunFlow.recovery then RunFlow.recovery=nil return end
   if purchaseIndex then purchaseIndex=nil return end
   if Results.visible then Results.hide() Game.backToMenu() return end
   if Game.state=='playing' or Game.state=='pause' then Game.togglePause()
-  elseif Game.state=='confirm' then Game.state='slots'
+  elseif Game.state=='confirm' then RunFlow.message='' Game.state='slots'
+  elseif Game.state=='slots' or Game.state=='difficulty' then RunFlow.back(Game)
   elseif Game.state~='over' then Game.backToMenu() end
  elseif key=='return' or key=='kpenter' then
-  if Game.state=='menu' or Game.state=='tutorialDone' then Game.state='difficulty'
+  if RunFlow.recovery then RunFlow.recovery=nil return end
+  if Game.state=='menu' or Game.state=='tutorialDone' then RunFlow.primary(Game)
   elseif Game.state=='shop' then
    if Results.visible then Results.hide() else Game.startRound() end
   end
