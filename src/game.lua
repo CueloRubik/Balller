@@ -9,7 +9,10 @@ local Sound=require('src.audio')
 local Save=require('src.save')
 local Feedback=require('src.feedback')
 local Difficulty=require('src.difficulty')
-local G={state='menu',winFlash=0,slot=nil,score=0,coins=0,time=0,spawn=0,t=0,notice='',noticeT=0,reason='',shake=0,round=1,roundLeft=0,roundDuration=0,roundHits=0,wallBounces=0,placed=0,boots=0,pulseCooldown=0,pulseVisual=0,autosaveClock=0,difficulty=2,rescues=0,rescueInvuln=0,tutorial=false,tutorialStep=0,tutorialWalk=0,reward=0,previousRound=0,previousHits=0,inventory={0,0,0,0,0,0}}
+local Progress=require('src.progression')
+local Collectibles=require('src.collectibles')
+local Rounds=require('src.rounds')
+local G={state='menu',winFlash=0,slot=nil,score=0,coins=0,time=0,spawn=0,t=0,notice='',noticeT=0,reason='',shake=0,round=1,roundLeft=0,roundDuration=0,roundHits=0,wallBounces=0,placed=0,boots=0,pulseCooldown=0,pulseVisual=0,autosaveClock=0,difficulty=2,rescues=0,rescueInvuln=0,tutorial=false,tutorialStep=0,tutorialWalk=0,roundStars=0,gemsReward=0,reward=0,previousRound=0,previousHits=0,inventory={0,0,0,0,0,0}}
 local function copyArray(list)
  local result={}
  for i,entry in ipairs(list) do
@@ -68,6 +71,10 @@ function G.buyUpgrade()
  G.saveRun()
  return true
 end
+function G.ballSpeed()
+ return math.min(365,math.floor((215+math.min(G.round-1,24)*6)*Difficulty.get(G.difficulty).ball+.5))
+end
+function G.roundMode() return Rounds.get(G.round) end
 function G.duration()
  return math.min(65,math.floor((28+(G.round-1)*2)*Difficulty.get(G.difficulty).roundTime+.5))
 end
@@ -111,6 +118,8 @@ function G.newRun(slot,difficulty)
  G.pulseVisual=0
  G.autosaveClock=0
  G.reward=0
+ G.gemsReward=0
+ G.roundStars=0
  G.winFlash=0
  G.previousRound=0
  G.previousHits=0
@@ -118,7 +127,11 @@ function G.newRun(slot,difficulty)
  G.shake=0
  G.player=Player.new()
  G.ball=Ball.new()
+ Ball.enforceSpeed(G.ball,G.ballSpeed())
+ Collectibles.clear()
  G.inventory={1,0,1,0,0,0,0,0}
+ Progress.track('plays')
+ Progress.save()
  H.clear()
  O.clear()
  FX.clear()
@@ -159,6 +172,9 @@ function G.loadRun(slot)
  G.player=s.player
  G.player.speed=265+G.boots*20
  G.ball=s.ball
+ Ball.enforceSpeed(G.ball,G.ballSpeed())
+ Collectibles.clear()
+ Collectibles.configure(G.roundMode().stars,G.roundMode().interval)
  G.ball.guard=G.ball.guard or 0
  G.ball.portalCooldown=G.ball.portalCooldown or 0
  G.ball.trail={}
@@ -175,7 +191,7 @@ end
 function G.startRound()
  if G.state~='shop' then return false end
  G.state='playing'
- G.rescues=Difficulty.get(G.difficulty).graces
+ G.rescues=Difficulty.get(G.difficulty).graces+G.roundMode().rescue
  G.rescueInvuln=0
  G.roundDuration=G.duration()
  G.roundLeft=G.roundDuration
@@ -185,13 +201,14 @@ function G.startRound()
  G.pulseCooldown=0
  G.pulseVisual=0
  G.autosaveClock=0
- G.spawn=math.max(1.45,5.2-G.round*.25)*Difficulty.get(G.difficulty).spawn
+ G.spawn=math.max(1.45,5.2-G.round*.25)*Difficulty.get(G.difficulty).spawn*G.roundMode().spawn
  G.player=Player.new()
  G.player.speed=265+G.boots*20
  G.ball=Ball.new()
- local increase=(1+math.min(.28,(G.round-1)*.045))*Difficulty.get(G.difficulty).ball
- G.ball.vx=G.ball.vx*increase
- G.ball.vy=G.ball.vy*increase
+ Ball.enforceSpeed(G.ball,G.ballSpeed())
+ G.roundStars=0
+ Collectibles.clear()
+ Collectibles.configure(G.roundMode().stars,G.roundMode().interval)
  H.clear()
  O.clear()
  FX.clear()
@@ -208,7 +225,8 @@ function G.endRound()
  local base=18+6*played
  local skill=math.min(15,hits)*2
  local goal=G.progress()>=G.goal() and G.bonus() or 0
- G.reward=math.floor((base+skill+goal)*Difficulty.get(G.difficulty).bonus+.5)
+ G.reward=math.floor((base+skill+goal)*Difficulty.get(G.difficulty).bonus*G.roundMode().reward+.5)
+ G.gemsReward=Progress.awardRound(played,G.difficulty)
  G.coins=math.min(99999,G.coins+G.reward)
  G.score=G.score+played*30+goal*5
  G.previousRound=played
@@ -216,11 +234,11 @@ function G.endRound()
  G.round=math.min(999,played+1)
  G.roundDuration=G.duration()
  G.roundLeft=G.roundDuration
- G.spawn=math.max(1.45,5.2-G.round*.25)*Difficulty.get(G.difficulty).spawn
+ G.spawn=math.max(1.45,5.2-G.round*.25)*Difficulty.get(G.difficulty).spawn*G.roundMode().spawn
  G.state='shop'
  G.winFlash=1.8
  G.pulseVisual=0
- G.notify('¡Ronda '..played..' superada! +'..G.reward..' monedas')
+ G.notify('¡Ronda '..played..' superada! +'..G.reward..' monedas'..(G.gemsReward>0 and ' y +'..G.gemsReward..' gemas' or ''))
  H.clear()
  O.clear()
  Feedback.resetCombo()
@@ -277,6 +295,7 @@ function G.startTutorial()
  G.slot=nil
  G.difficulty=1
  G.tutorial=true
+ Collectibles.clear()
  G.tutorialStep=1
  G.tutorialWalk=0
  G.state='playing'
@@ -296,7 +315,10 @@ function G.startTutorial()
  G.spawn=900
  G.player=Player.new()
  G.ball=Ball.new()
+ Ball.enforceSpeed(G.ball,G.ballSpeed())
+ Collectibles.clear()
  G.ball.vx,G.ball.vy=65,45
+ Ball.enforceSpeed(G.ball,105)
  G.inventory={1,0,1,0,0,0,0,0}
  H.clear() O.clear() FX.clear() Feedback.reset()
  G.notify('Mueve a tu personaje con WASD o las flechas')
@@ -325,6 +347,7 @@ function G.pulse()
  end
  local nx,ny=U.normal(dx,dy)
  G.ball.vx,G.ball.vy=nx*460,ny*460
+ Ball.enforceSpeed(G.ball,G.ballSpeed())
  G.ball.cooldown=.22
  G.pulseCooldown=10
  if G.tutorial and G.tutorialStep==3 then G.tutorialNext() end
@@ -360,6 +383,7 @@ function G.update(dt)
    FX.burst(G.ball.x,G.ball.y,C.gold,7)
   end
   O.collide(G.ball) O.update(dt,G.ball)
+  Ball.enforceSpeed(G.ball,105)
   return
  end
  G.pulseCooldown=math.max(0,G.pulseCooldown-dt)
@@ -378,7 +402,7 @@ function G.update(dt)
  local maxHazards=math.min(mode.maxHazards,2+math.floor(G.round/2))
  if G.spawn<=0 then
   if #H.list<maxHazards and H.spawn(G.player,G.ball,G.round,mode) then Sound.play('warn') end
-  G.spawn=math.max(1.6,5.15-G.round*.27)*mode.spawn
+  G.spawn=math.max(1.6,5.15-G.round*.27)*mode.spawn*G.roundMode().spawn
  end
  Player.update(G.player,dt)
  Ball.update(G.ball,dt,function(x,y)
@@ -389,6 +413,7 @@ function G.update(dt)
  local scoreBefore=G.score
  if Ball.hitPlayer(G.ball,G.player) then
   G.roundHits=G.roundHits+1
+  Progress.track('hits')
   if G.goalKind()=='hits' and G.roundHits==G.goal() then G.notify('¡Objetivo de la ronda cumplido!') end
   local nextCombo=Feedback.comboTimer>0 and Feedback.combo+1 or 1
   local multiplier=math.min(3,1+math.floor((nextCombo-1)/3))
@@ -411,13 +436,27 @@ function G.update(dt)
   Sound.play('coin',1.12)
  end
  O.update(dt,G.ball)
- local fatal=H.update(dt,G.ball,O.list)
+ local hazardDt=dt
+ for _,o in ipairs(O.list) do
+  if o.kind==6 then hazardDt=dt*.72 break end
+ end
+ local fatal=H.update(hazardDt,G.ball,O.list)
+ Collectibles.update(dt,G.ball,H.list,function(x,y)
+  G.roundStars=G.roundStars+1
+  G.score=G.score+25
+  Progress.track('stars')
+  FX.burst(x,y,C.gold,12)
+  Feedback.pop(x,y-24,'+25',C.gold)
+  Sound.play('coin')
+ end)
+ Ball.enforceSpeed(G.ball,G.ballSpeed())
  if fatal then
   if G.rescueInvuln>0 then return end
   if (G.ball.guard or 0)>0 or G.rescues>0 then
    if (G.ball.guard or 0)>0 then G.ball.guard=0 else G.rescues=G.rescues-1 end
    G.ball.x,G.ball.y=630,313
    G.ball.vx,G.ball.vy=180,-150
+   Ball.enforceSpeed(G.ball,G.ballSpeed())
    G.ball.cooldown=.4
    G.ball.portalCooldown=1
    G.rescueInvuln=1.5

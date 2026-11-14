@@ -7,7 +7,7 @@ O.types={
  {name='Tapa',sprite='lid',cost=20,r=32,hits=1,duration=16,short='Cubre una abertura',desc='Cubre una alcantarilla.'},
  {name='Imán',sprite='magnet',cost=38,r=27,hits=99,duration=23,short='Atrae la pelota',desc='Atrae la pelota.'},
  {name='Ventilador',sprite='fan',cost=35,r=27,hits=99,duration=23,short='Aleja la pelota',desc='Empuja la pelota.'},
- {name='Reloj',sprite='clock',cost=34,r=27,hits=99,duration=20,short='Reduce velocidad',desc='Ralentiza la pelota.'},
+ {name='Reloj',sprite='clock',cost=34,r=27,hits=99,duration=20,short='Frena peligros',desc='Reduce la velocidad de las amenazas.'},
  {name='Burbuja',sprite='bubble',cost=42,r=29,hits=1,duration=30,short='Escudo temporal',desc='Da protección temporal al tocar la pelota.'},
  {name='Portal',sprite='portal',cost=48,r=28,hits=2,duration=28,short='Salida de emergencia',desc='Teletransporta la pelota a una zona segura.'}
 }
@@ -53,9 +53,6 @@ function O.update(dt,b)
     elseif o.kind==5 then
      b.vx=b.vx+nx*850*factor*dt
      b.vy=b.vy+ny*850*factor*dt
-    else
-     local damp=(.955)^(dt*60*factor)
-     b.vx,b.vy=b.vx*damp,b.vy*damp
     end
     o.fx=.16
    end

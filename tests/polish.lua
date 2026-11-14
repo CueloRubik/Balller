@@ -32,7 +32,7 @@ G.player.x,G.player.y=460,330
 G.ball.x,G.ball.y=500,330
 G.ball.vx,G.ball.vy=-100,80
 assert(G.pulse(),'El rescate cercano debe activarse')
-assert(G.pulseCooldown==10 and G.ball.vx>400 and math.abs(G.ball.vy)<.1)
+assert(G.pulseCooldown==10 and math.abs(G.ball.vx-G.ballSpeed())<.01 and math.abs(G.ball.vy)<.1)
 assert(not G.pulse(),'Hay que respetar el enfriamiento')
 assert(G.saveRun())
 local saved=assert(Save.loadRun(1))

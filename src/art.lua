@@ -3,6 +3,7 @@ local UI=require('src.ui')
 local A=require('src.arena')
 local S=require('src.sprites')
 local O=require('src.objects')
+local Progress=require('src.progression')
 local M={}
 local lg=love.graphics
 local function col(c,a) UI.color(c,a) end
@@ -96,7 +97,7 @@ function M.ball(b)
  col(C.shadow,.14)
  lg.ellipse('fill',b.x+3,b.y+18,17,8)
  local frame=math.floor(b.spin*1.273)%8+1
- S.draw('ball',b.x,b.y,frame,62)
+ S.draw(Progress.skinSprite(),b.x,b.y,frame,62)
  if (b.guard or 0)>0 then
   col(C.blue,.23) lg.circle('fill',b.x,b.y,37+math.sin(b.guard*7)*2)
   col(C.paper,.88) lg.setLineWidth(3) lg.circle('line',b.x,b.y,37) lg.setLineWidth(1)

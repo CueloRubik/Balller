@@ -86,6 +86,27 @@ function I.draw(name,x,y,size,c)
   g.setLineWidth(4)
   g.line(-8,0,8,0)
   g.line(0,-8,0,8)
+ elseif name=='gem' then
+  path(-8,-5,-3,-11,5,-11,10,-5,0,11)
+  g.setColor(.6,.98,1,1)
+  path(-3,-5,0,10,4,-5)
+ elseif name=='ball' then
+  g.circle('fill',0,0,11)
+  g.setColor(.4,.27,.15,1)
+  g.setLineWidth(2) g.arc('line','open',0,0,8,-2,1.5)
+ elseif name=='medal' then
+  path(-7,-12,-1,-12,0,-4,-5,1)
+  path(1,-12,7,-12,5,1,0,-4)
+  g.circle('fill',0,4,8)
+ elseif name=='gear' then
+  for i=0,7 do
+   local a=i*math.pi/4
+   g.push() g.rotate(a) g.rectangle('fill',-3,-12,6,6,1,1) g.pop()
+  end
+  g.circle('fill',0,0,8)
+  g.setColor(.16,.4,.61) g.circle('fill',0,0,3.2)
+ elseif name=='next' then
+  g.setLineWidth(4) g.line(-4,-9,5,0,-4,9)
  elseif name=='back' then
   g.setLineWidth(3.8) g.line(-2,-9,-10,0,-2,9)
   g.line(-10,0,10,0)
