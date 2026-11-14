@@ -10,7 +10,7 @@ assert Path(name).name==name and name.endswith('.love'),'Use a .love filename wi
 output=root/'dist'/name
 output.parent.mkdir(exist_ok=True)
 files=[root/'main.lua',root/'conf.lua']
-files.extend(p for directory in ('src','assets') for p in (root/directory).rglob('*') if p.is_file())
+files.extend(p for directory in ('src','assets','data') for p in (root/directory).rglob('*') if p.is_file())
 for path in files:
     assert path.is_file(),f'Falta: {path}'
 with ZipFile(output,'w') as archive:

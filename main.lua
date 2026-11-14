@@ -7,6 +7,8 @@ local Objects=require('src.objects')
 local Progress=require('src.progression')
 local Screens=require('src.v7screens')
 local Results=require('src.presentation.round_results')
+local VisualPrefs=require('src.presentation.preferences')
+local VisualSettings=require('src.screens.visual_settings')
 local purchaseIndex=nil
 local purchaseCooldown=0
 
@@ -44,6 +46,7 @@ function love.load()
  UI.load()
  Art.load()
  Save.load()
+ VisualPrefs.load()
  Progress.load()
  Sound.load()
  Sound.enabled=Save.sound
@@ -132,6 +135,10 @@ local function click(id)
   Game.state='slots'
  elseif id=='deleteConfirm' then
   Save.clearRun(confirmSlot) Game.state='slots'
+ elseif id:sub(1,6)=='arena:' then
+  VisualSettings.result(VisualPrefs.setArena(id:sub(7)))
+ elseif id=='reduced' then
+  VisualSettings.result(VisualPrefs.setReduced(not VisualPrefs.reduced))
  elseif id=='sound' then
   Save.sound=not Save.sound Sound.enabled=Save.sound Save.store()
  elseif id:sub(1,4)=='skin' then

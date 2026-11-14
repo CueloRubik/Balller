@@ -4,8 +4,8 @@ local iconIndex={}
 for i,name in ipairs(names) do iconIndex[name]=i-1 end
 function M.load()
  M.images={} M.quads={}
- for _,name in ipairs({'surfaces','icons','backdrop','home-court','meters'}) do
-  local path='assets/ui/'..name..'.png'
+ for _,name in ipairs({'surfaces','icons','backdrop','home-court','meters','arena-patio','arena-taller','arena-ciudad'}) do
+  local path=name:sub(1,6)=='arena-' and ('assets/backgrounds/'..name:sub(7)..'.png') or ('assets/ui/'..name..'.png')
   if love.filesystem.getInfo(path) then
    local ok,image=pcall(love.graphics.newImage,path)
    if ok then

@@ -335,7 +335,7 @@ function G.tutorialNext()
   Save.tutorialDone=true Save.store()
   Sound.play('round')
  else
-  local notes={'','Mueve al personaje','Toca la pelota','Acércate y usa ESPACIO','Pulsa 1 y haz clic en la cancha'}
+  local notes={[2]='Toca la pelota',[3]='Acércate y usa ESPACIO',[4]='Pulsa 1 y haz clic en la cancha'}
   G.notify(notes[G.tutorialStep] or '')
  end
 end

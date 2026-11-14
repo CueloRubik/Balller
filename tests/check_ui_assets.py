@@ -9,6 +9,7 @@ icons=sorted((root/'assets/ui/icons').glob('*.png'))
 assert len(icons)==32
 assert len({hashlib.sha256(p.read_bytes()).hexdigest() for p in icons})==32
 paths.update({p:(64,64) for p in icons})
+for name in ['patio','taller','ciudad']:paths[root/'assets/backgrounds'/(name+'.png')]=(932,440)
 for path,dimensions in paths.items():
     data=path.read_bytes()
     assert data[:8]==b'\x89PNG\r\n\x1a\n',path
@@ -32,4 +33,4 @@ for filename in ['Nunito-Regular.ttf','Nunito-ExtraBold.ttf']:
     assert font.read_bytes()[:4]==b'\x00\x01\x00\x00' and font.stat().st_size>10000
 license=(root/'assets/fonts/OFL-Nunito.txt').read_text()
 assert 'SIL OPEN FONT LICENSE Version 1.1' in license and 'Nunito Project Authors' in license
-print('37 valid UI PNGs, 32 unique icons, two TrueType fonts and bundled OFL verified')
+print('40 valid UI/court PNGs, 32 unique icons, two TrueType fonts and bundled OFL verified')

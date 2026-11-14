@@ -5,12 +5,13 @@ function M.install()
  local P=require('src.progression')
  local Save=require('src.save')
  local Results=require('src.presentation.round_results')
+ local Prefs=require('src.presentation.preferences')
  local frame,paid=0,nil
  local function click(x,y) love.mousepressed(x,y,1) end
  love.load=function()
   love.filesystem.setIdentity('balller_ci_flow_v8',true)
   for slot=1,3 do Save.clearRun(slot) end
-  for _,file in ipairs({'perfil_balller_v7.txt','perfil_balller_v7.txt.bak','save.txt'}) do love.filesystem.remove(file) end
+  for _,file in ipairs({'perfil_balller_v7.txt','perfil_balller_v7.txt.bak','save.txt',Prefs.file}) do love.filesystem.remove(file) end
   oldLoad()
   P.gems=12 P.owned={true,false,false,false} P.skin=1
   assert(P.save())
@@ -48,7 +49,23 @@ function M.install()
   elseif frame==80 then
    assert(G.state=='menu' and Save.hasRun(1))
    assert(P.load() and P.gems==8 and P.skin==1)
-   print('NATIVE B2 FLOW OK: cancel, buy, persisted profile, equip, saved round and one-time summary')
+   click(884,620)
+  elseif frame==85 then assert(G.state=='settings') click(500,458)
+  elseif frame==90 then
+   assert(Prefs.arena=='taller')
+   Prefs.arena='patio' assert(Prefs.load() and Prefs.arena=='taller')
+   click(270,539)
+  elseif frame==95 then
+   assert(Prefs.reduced)
+   Prefs.reduced=false assert(Prefs.load() and Prefs.reduced)
+   click(116,620)
+  elseif frame==100 then click(782,394)
+  elseif frame==105 then assert(G.state=='slots') click(669,204)
+  elseif frame==110 then assert(G.state=='shop') click(700,620)
+  elseif frame==115 then
+   assert(G.state=='playing' and Prefs.arena=='taller' and Prefs.reduced)
+   assert(math.abs(math.sqrt(G.ball.vx^2+G.ball.vy^2)-G.ballSpeed())<.001)
+   print('NATIVE B3 FLOW OK: B2 circuit plus saved court/reduced settings and resumed fixed-speed play')
    love.event.quit(0)
   end
  end

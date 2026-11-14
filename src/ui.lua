@@ -42,6 +42,18 @@ function UI.label(s,x,y,font,c,align,w)
  col(c or C.ink)
  if align then g.printf(s,x,y,w or 300,align) else g.print(s,x,y) end
 end
+function UI.singleLine(text,x,y,width,font,color)
+ text=tostring(text or '')
+ font=font or UI.fonts.small
+ if font:getWidth(text)>width then
+  while #text>0 and font:getWidth(text..'...')>width do
+   text=text:gsub('[%z\1-\127\194-\244][\128-\191]*$','')
+  end
+  text=text..'...'
+ end
+ UI.label(text,x,y,font,color)
+ return text
+end
 function UI.headline(s,x,y,w,font,c)
  font=font or UI.fonts.big
  g.setFont(font)
