@@ -86,3 +86,5 @@ lua tests/v8_physics.lua
 ```
 
 El juego y el paquete siguen identificados como v7 hasta integrar las fases funcionales de v8.
+
+La primera parte visual de B incorpora atlas PNG, 32 iconos, Nunito con licencia y componentes con relieve. Ver [guía visual](docs/V8-GUIA-VISUAL.md) y [pruebas y alcance B1](docs/V8-FASE-B1.md). Paquete de desarrollo: `python3 tools/package_love.py --output Balller-v8-B1.love`. Las capturas del motor se pueden reproducir desde el código fuente con `love . --visual-check`.

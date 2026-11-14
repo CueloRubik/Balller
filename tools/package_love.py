@@ -1,8 +1,13 @@
+import argparse
 from pathlib import Path
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED
 
 root=Path(__file__).resolve().parents[1]
-output=root/'dist'/'Balller-v7.love'
+parser=argparse.ArgumentParser()
+parser.add_argument('--output',default='Balller-v7.love',help='Filename inside dist/')
+name=parser.parse_args().output
+assert Path(name).name==name and name.endswith('.love'),'Use a .love filename without directories'
+output=root/'dist'/name
 output.parent.mkdir(exist_ok=True)
 files=[root/'main.lua',root/'conf.lua']
 files.extend(p for directory in ('src','assets') for p in (root/directory).rglob('*') if p.is_file())

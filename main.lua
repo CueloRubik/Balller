@@ -24,9 +24,9 @@ local function resize(w,h)
  offsetY=(h-H*scale)/2
 end
 local function logical(x,y) return (x-offsetX)/scale,(y-offsetY)/scale end
-local function addButton(id,x,y,w,h,label,c,icon,small)
- local rect=UI.button(x,y,w,h,label,c,mouseX,mouseY,icon,small)
- buttons[#buttons+1]={id=id,rect=rect}
+local function addButton(id,x,y,w,h,label,c,icon,small,options)
+ local rect=UI.button(x,y,w,h,label,c,mouseX,mouseY,icon,small,options)
+ buttons[#buttons+1]={id=id,rect=rect,disabled=options and options.disabled}
 end
 local function hitbox(id,x,y,w,h)
  buttons[#buttons+1]={id=id,rect={x=x,y=y,w=w,h=h}}
@@ -150,6 +150,7 @@ function love.mousepressed(x,y,button)
  for i=#buttons,1,-1 do
   local r=buttons[i].rect
   if x>=r.x and x<=r.x+r.w and y>=r.y and y<=r.y+r.h then
+   if buttons[i].disabled then return end
    click(buttons[i].id)
    return
   end
@@ -185,4 +186,7 @@ end
 function love.quit()
  Progress.save()
  if not Game.tutorial and (Game.state=='playing' or Game.state=='pause' or Game.state=='shop') then Game.saveRun() end
+end
+for _,value in pairs(arg or {}) do
+ if value=='--visual-check' then require('tools.capture_ui').install() break end
 end

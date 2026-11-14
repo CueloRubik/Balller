@@ -1,3 +1,4 @@
+local Assets=require('src.presentation.assets')
 local C=require('src.theme')
 local UI=require('src.ui')
 local A=require('src.arena')
@@ -9,6 +10,7 @@ local lg=love.graphics
 local function col(c,a) UI.color(c,a) end
 function M.load() S.load() end
 function M.background(t)
+ if Assets.image('backdrop',0,0,1000,680) then return end
  lg.clear({.85,.95,1})
  for i=0,17 do
   local y=i*40

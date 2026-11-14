@@ -1,9 +1,11 @@
+local Assets=require('src.presentation.assets')
 local I={}
 local g=love.graphics
 local pi=math.pi
 local function path(...) g.polygon('fill',...) end
 function I.draw(name,x,y,size,c)
  size=size or 24
+ if Assets.icon(name,x,y,size*1.30) then return end
  g.push('all')
  g.translate(x,y)
  g.scale(size/24)

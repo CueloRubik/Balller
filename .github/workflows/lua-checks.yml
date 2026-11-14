@@ -36,12 +36,26 @@ jobs:
         run: lua tests/v8_economy.lua
       - name: Protect constant speed at 30, 60 and 120 fps
         run: lua tests/v8_physics.lua
+      - name: Verify UI PNGs and font licenses
+        run: python3 tests/check_ui_assets.py
+      - name: Test nine-slice and resource fallback
+        run: lua tests/ui_assets.lua
+      - name: Test resized UI and disabled purchases
+        run: lua tests/visual_flow.lua
+      - name: Capture native UI at five resolutions
+        run: SDL_AUDIODRIVER=dummy LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a timeout 60s love . --visual-check
+      - name: Upload native UI captures
+        uses: actions/upload-artifact@v4
+        with:
+          name: Balller-v8-B1-native-captures
+          path: ~/.local/share/love/balller_visual_v8/captures/*.png
+          if-no-files-found: error
       - name: Native LÖVE 2D rendering smoke test
         run: SDL_AUDIODRIVER=dummy LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a timeout 25s love . --ci-smoke
       - name: Package .love distributable
-        run: python3 tools/package_love.py
+        run: python3 tools/package_love.py --output Balller-v8-B1.love
       - name: Upload playable build
         uses: actions/upload-artifact@v4
         with:
-          name: Balller-v7-love
-          path: dist/Balller-v7.love
+          name: Balller-v8-B1-love
+          path: dist/Balller-v8-B1.love

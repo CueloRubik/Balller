@@ -1,24 +1,29 @@
 local C=require('src.theme')
 local U=require('src.util')
 local Icons=require('src.icons')
+local Assets=require('src.presentation.assets')
 local UI={fonts={}}
 local g=love.graphics
 local function col(c,a) g.setColor(c[1],c[2],c[3],a or c[4] or 1) end
 UI.color=col
 function UI.load()
- local font='assets/fonts/Rubik-Bold.ttf'
- local normal='assets/fonts/Rubik-Regular.ttf'
+ Assets.load()
+ local font='assets/fonts/Nunito-ExtraBold.ttf'
+ local normal='assets/fonts/Nunito-Regular.ttf'
  local bold=love.filesystem.getInfo(font) and font or nil
  local regular=love.filesystem.getInfo(normal) and normal or nil
  local function make(file,size)
-  if file then return g.newFont(file,size) end
+  if file then
+   local ok,font=pcall(g.newFont,file,size)
+   if ok then return font end
+  end
   return g.newFont(size)
  end
  UI.fonts.tiny=make(regular,14)
  UI.fonts.small=make(regular,17)
  UI.fonts.body=make(regular,20)
- UI.fonts.medium=make(bold,27)
- UI.fonts.title=make(bold,40)
+ UI.fonts.medium=make(bold,25)
+ UI.fonts.title=make(bold,36)
  UI.fonts.big=make(bold,72)
  UI.fonts.number=make(bold,29)
 end
@@ -47,27 +52,38 @@ function UI.headline(s,x,y,w,font,c)
 end
 function UI.panel(x,y,w,h,r)
  r=r or 24
+ if Assets.surface(6,0,x,y,w,h) then return end
  UI.rect(x+2,y+10,w,h,r,{.58,.72,.75})
  UI.rect(x,y+3,w,h,r,{.82,.92,.92})
  UI.rect(x,y,w,h,r,C.paper)
  UI.outline(x+1,y+1,w-2,h-2,r,{.75,.85,.87},1.7)
 end
-function UI.button(x,y,w,h,label,c,mouseX,mouseY,icon,compact)
+function UI.button(x,y,w,h,label,c,mouseX,mouseY,icon,compact,options)
+ options=options or {}
  local hover=mouseX>=x and mouseX<=x+w and mouseY>=y and mouseY<=y+h
- local lift=hover and -3 or 0
- local r=math.min(16,h/3)
- UI.rect(x,y+6,w,h,r,{math.max(0,c[1]*.7),math.max(0,c[2]*.7),math.max(0,c[3]*.7)})
- UI.rect(x,y+lift,w,h,r,c)
- col(C.paper,.20)
- g.rectangle('fill',x+5,y+lift+4,w-10,math.min(11,h*.22),r,r)
- UI.outline(x+1,y+lift+1,w-2,h-2,r,{1,1,1},1.5)
+ local pressed=hover and not options.disabled and love.mouse and love.mouse.isDown and love.mouse.isDown(1)
+ local state=options.disabled and 2 or (pressed and 1 or (options.selected and 3 or 0))
+ local lift=pressed and 3 or (hover and not options.disabled and -2 or 0)
+ if not Assets.surface(Assets.palette(c),state,x,y+lift,w,h+4) then
+  local r=math.min(16,h/3)
+  UI.rect(x,y+6,w,h,r,C.shadow)
+  UI.rect(x,y+lift,w,h,r,options.disabled and {.62,.72,.74} or c)
+  UI.outline(x+1,y+lift+1,w-2,h-2,r,C.paper,1.5)
+ end
  local font=compact and UI.fonts.small or UI.fonts.medium
- g.setFont(font)
+ local iconSize=compact and 23 or 29
+ local padding=icon and iconSize+8 or 0
+ if font:getWidth(label)>w-28-padding then font=UI.fonts.tiny end
+ local textColor=(c==C.gold or c==C.paper) and C.ink or C.paper
+ if options.disabled then textColor=C.ink end
  local tw=font:getWidth(label)
- local ix=x+w/2-(icon and (tw+29)/2 or tw/2)
- if icon then Icons.draw(icon,ix+10,y+lift+h/2,compact and 18 or 23,C.paper) end
- if icon then UI.label(label,ix+28,y+lift+(h-font:getHeight())/2-1,font,C.paper)
- else UI.label(label,x,y+lift+(h-font:getHeight())/2-1,font,C.paper,'center',w) end
+ if label=='' and icon then
+  Icons.draw(icon,x+w/2,y+lift+h/2,iconSize,C.paper)
+ else
+  local start=x+(w-tw-padding)/2
+  if icon then Icons.draw(icon,start+iconSize/2,y+lift+h/2,iconSize,C.paper) end
+  UI.label(label,start+padding,y+lift+(h-font:getHeight())/2-1,font,textColor)
+ end
  return {x=x,y=y,w=w,h=h}
 end
 function UI.pill(x,y,w,h,icon,label,value,bg,iconC)
