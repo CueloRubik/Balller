@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Lua 5.4
-        run: sudo apt-get update && sudo apt-get install -y lua5.4
+        run: sudo apt-get update && sudo apt-get install -y lua5.4 love xvfb
       - name: Check syntax
         run: find . -type f -name '*.lua' -print0 | xargs -0 -n 1 luac -p
       - name: Verify PNG sprites
@@ -22,3 +22,14 @@ jobs:
         run: lua tests/smoke.lua fallback
       - name: Check eight player directions
         run: lua tests/verify_directions.lua
+      - name: Validate recovery, upgrades, pulse and rotating objectives
+        run: lua tests/polish.lua
+      - name: Native LÖVE 2D rendering smoke test
+        run: SDL_AUDIODRIVER=dummy LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a timeout 25s love . --ci-smoke
+      - name: Package .love distributable
+        run: python3 tools/package_love.py
+      - name: Upload playable build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Balller-v5-love
+          path: dist/Balller-v5.love

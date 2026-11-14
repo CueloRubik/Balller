@@ -9,6 +9,14 @@ local function split(line)
  for part in (line..'|'):gmatch('(.-)|') do parts[#parts+1]=part end
  return parts
 end
+local function checksum(s)
+ local a,b=1,0
+ for i=1,#s do
+  a=(a+s:byte(i))%65521
+  b=(b+a)%65521
+ end
+ return tostring(b*65536+a)
+end
 local function row(tag,data,keys)
  local out={tag}
  for _,key in ipairs(keys) do
@@ -52,6 +60,12 @@ function M.encode(s)
   inventory[#inventory+1]=tostring(n)
  end
  lines[#lines+1]=table.concat(inventory,'|')
+ local boots=s.boots or 0
+ local walls=s.wallBounces or 0
+ local placed=s.placed or 0
+ local pulse=s.pulseCooldown or 0
+ if boots%1~=0 or boots<0 or boots>3 or walls<0 or walls>10000 or placed<0 or placed>10000 or pulse<0 or pulse>30 then return nil end
+ lines[#lines+1]=table.concat({'X',boots,walls,placed,string.format('%.5f',pulse)},'|')
  if #s.hazards>24 or #s.objects>50 then return nil end
  for _,h in ipairs(s.hazards) do
   local line=row('H',h,hazardKeys)
@@ -63,6 +77,7 @@ function M.encode(s)
   if not line then return nil end
   lines[#lines+1]=line
  end
+ lines[#lines+1]='K|'..checksum(table.concat(lines,'\n'))
  lines[#lines+1]='END'
  return table.concat(lines,'\n')
 end
@@ -74,6 +89,11 @@ function M.decode(text)
   lines[#lines+1]=line
  end
  if lines[1]~='BALLLER_RUN_2' or lines[#lines]~='END' or #lines<6 then return nil end
+ if lines[#lines-1] and lines[#lines-1]:sub(1,2)=='K|' then
+  local expected=lines[#lines-1]:sub(3)
+  if expected~=checksum(table.concat(lines,'\n',1,#lines-2)) then return nil end
+  table.remove(lines,#lines-1)
+ end
  local g=split(lines[2])
  if #g~=#rootKeys+2 then return nil end
  local state=g[#g]
@@ -93,9 +113,22 @@ function M.decode(text)
   if not n or n%1~=0 then return nil end
   s.inventory[i]=n
  end
+ s.boots,s.wallBounces,s.placed,s.pulseCooldown=0,0,0,0
+ local start=6
+ if lines[6] and lines[6]:sub(1,2)=='X|' then
+  local extra=split(lines[6])
+  if #extra~=5 then return nil end
+  local boots=number(extra[2],0,3)
+  local walls=number(extra[3],0,10000)
+  local placed=number(extra[4],0,10000)
+  local pulse=number(extra[5],0,30)
+  if not boots or boots%1~=0 or not walls or walls%1~=0 or not placed or placed%1~=0 or not pulse then return nil end
+  s.boots,s.wallBounces,s.placed,s.pulseCooldown=boots,walls,placed,pulse
+  start=7
+ end
  s.hazards={}
  s.objects={}
- for i=6,#lines-1 do
+ for i=start,#lines-1 do
   local parts=split(lines[i])
   if parts[1]=='H' then
    local h=fields(parts,hazardKeys,-100000,100000)

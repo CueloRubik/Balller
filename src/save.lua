@@ -30,25 +30,37 @@ local function slotPath(slot)
 end
 function M.hasRun(slot)
  local path=slotPath(slot)
- return path~=nil and love.filesystem.getInfo(path)~=nil
+ return path~=nil and (love.filesystem.getInfo(path)~=nil or love.filesystem.getInfo(path..'.bak')~=nil)
 end
 function M.storeRun(data,slot)
  local path=slotPath(slot)
  local encoded=Runfile.encode(data)
  if not path or not encoded then return false end
+ local previous=love.filesystem.read(path)
+ if previous and Runfile.decode(previous) then
+  local backed=love.filesystem.write(path..'.bak',previous)
+  if not backed then return false end
+ end
  return love.filesystem.write(path,encoded)
 end
 function M.loadRun(slot)
  local path=slotPath(slot)
  if not path or not M.hasRun(slot) then return nil end
  local data=love.filesystem.read(path)
- return Runfile.decode(data)
+ local parsed=Runfile.decode(data)
+ if parsed then return parsed end
+ local backup=love.filesystem.read(path..'.bak')
+ parsed=Runfile.decode(backup)
+ if parsed then love.filesystem.write(path,backup) end
+ return parsed
 end
 function M.clearRun(slot)
  local path=slotPath(slot)
  if not path then return false end
- if M.hasRun(slot) then return love.filesystem.remove(path) end
- return true
+ local result=true
+ if love.filesystem.getInfo(path) then result=love.filesystem.remove(path) and result end
+ if love.filesystem.getInfo(path..'.bak') then result=love.filesystem.remove(path..'.bak') and result end
+ return result
 end
 function M.slotInfo(slot)
  return M.loadRun(slot)

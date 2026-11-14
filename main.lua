@@ -12,6 +12,11 @@ local Hazards=require('src.hazards')
 local Objects=require('src.objects')
 
 local W,H=1000,680
+local ciFrames=nil
+local function ciSmokeRequested()
+ for _,value in pairs(arg or {}) do if value=='--ci-smoke' then return true end end
+ return false
+end
 local scale,ox,oy=1,0,0
 local buttons={}
 local mouseX,mouseY=0,0
@@ -125,16 +130,16 @@ local function help()
  UI.headline('CÓMO JUGAR',151,128,697,UI.fonts.title,C.navy)
  UI.rect(139,199,724,65,16,{.9,.98,.95})
  Icons.draw('arrows',171,232,30,C.mintDark)
- UI.label('Mueve al personaje y golpea la pelota.',203,205,UI.fonts.body,C.ink)
- UI.label('WASD o flechas • P para pausar • clic para colocar.',203,232,UI.fonts.small,C.muted)
+ UI.label('Mueve al personaje y protege la pelota.',203,205,UI.fonts.body,C.ink)
+ UI.label('WASD: mover • Espacio: pulso de rescate • P: pausa.',203,232,UI.fonts.small,C.muted)
  UI.rect(139,276,724,67,16,{.92,.97,1})
  Icons.draw('flag',171,308,29,C.blue)
  UI.label('Sobrevive hasta que termine el tiempo de ronda.',203,280,UI.fonts.body,C.ink)
- UI.label('Gana monedas: base + golpes + objetivo cumplido.',203,308,UI.fonts.small,C.muted)
+ UI.label('Gana monedas: supervivencia + golpes + meta variable.',203,308,UI.fonts.small,C.muted)
  UI.rect(139,355,724,62,16,{1,.97,.89})
  Icons.draw('bag',171,385,29,C.gold)
  UI.label('Compra objetos entre rondas. Úsalos dentro de la cancha.',203,363,UI.fonts.body,C.ink)
- UI.label('Los que no utilices se conservan para rondas futuras.',203,392,UI.fonts.small,C.muted)
+ UI.label('Guarda defensas y mejora tus zapatillas entre rondas.',203,392,UI.fonts.small,C.muted)
  UI.label('NUEVOS PELIGROS A PARTIR DE LAS RONDAS 2, 4 Y 6',143,435,UI.fonts.small,C.muted)
  for i,name in ipairs({'spikes','drain','saw','shock','vortex'}) do
   local x=214+(i-1)*143
@@ -157,9 +162,15 @@ local function shop()
  end
  UI.rect(95,197,810,45,14,{.9,.97,1})
  Icons.draw('star',117,219,24,C.gold)
- local rewardText=Game.previousRound==0 and 'Tienes 40 monedas y 2 defensas iniciales.' or ('Recompensa de la ronda anterior: +'..Game.reward..' monedas')
+ local rewardText='Empiezas con 40 monedas y 2 defensas gratis.'
+ if Game.previousRound>0 then
+  local base=18+6*Game.previousRound
+  local hits=2*math.min(15,Game.previousHits)
+  local meta=Game.reward-base-hits
+  rewardText='Ronda '..Game.previousRound..': +'..base..' por sobrevivir  +'..hits..' por golpes  +'..meta..' por meta'
+ end
  UI.label(rewardText,140,205,UI.fonts.small,C.ink)
- UI.label('Objetivo siguiente: '..Game.goal()..' golpes = +12 monedas',140,226,UI.fonts.tiny,C.muted)
+ UI.label('Meta: '..Game.objectiveText()..' '..Game.goal()..' = +'..Game.bonus()..' monedas',140,226,UI.fonts.tiny,C.muted)
  for i,item in ipairs(Objects.types) do
   local col=(i-1)%3
   local row=math.floor((i-1)/3)
@@ -169,14 +180,18 @@ local function shop()
   UI.rect(x,y,257,119,16,((i%2)==0) and {.94,.98,1} or {.94,.99,.96})
   Sprites.draw(item.sprite,x+52,y+41,math.floor(Game.t*8)%8+1,79)
   UI.label(item.name,x+102,y+13,UI.fonts.body,C.ink)
-  UI.label('Tienes '..Game.inventory[i],x+105,y+39,UI.fonts.small,C.muted)
+  UI.label('Tienes '..Game.inventory[i],x+105,y+37,UI.fonts.small,C.muted)
+  UI.label(item.short or '',x+102,y+56,UI.fonts.tiny,C.muted)
   UI.rect(x+14,y+73,110,35,11,{1,.96,.82})
   Icons.draw('coin',x+33,y+91,17,C.gold)
   UI.label(tostring(item.cost),x+51,y+79,UI.fonts.body,C.navy)
   addButton('buy'..i,x+130,y+73,115,35,'COMPRAR',Game.coins>=item.cost and C.mint or C.blue,'plus',true)
  end
- local nextHazard=Game.round>=6 and 'Todos los peligros activos' or Game.round>=4 and 'Nueva amenaza: descarga eléctrica' or Game.round>=2 and 'Nueva amenaza: sierra móvil' or 'Pinchos y alcantarillas'
- UI.label(nextHazard,111,529,UI.fonts.small,C.muted)
+ local cost=Game.upgradeCost()
+ UI.rect(105,515,790,38,12,{.90,.97,1})
+ Icons.draw('arrows',125,534,23,C.blue)
+ UI.label('Zapatillas '..Game.boots..'/3  ·  +20 velocidad por nivel',148,522,UI.fonts.small,C.ink)
+ addButton('upgrade',696,518,192,32,cost and ('MEJORAR  $'..cost) or 'MÁXIMO',cost and C.blue or C.mint,'plus',true)
  addButton('home',104,567,230,53,'GUARDAR Y SALIR',C.blue,'save',true)
  addButton('round',524,560,380,64,'JUGAR RONDA '..Game.round,C.mint,'play')
 end
@@ -200,7 +215,7 @@ local function inventoryBar()
  end
  local it=Objects.types[Objects.selected]
  UI.label('CLIC: colocar   •   '..it.desc,36,651,UI.fonts.small,C.ink)
- UI.label('WASD: mover   •   P: pausa',750,652,UI.fonts.small,C.muted)
+ UI.label('ESPACIO: pulso   •   P: pausa',716,652,UI.fonts.small,C.muted)
 end
 local function inGame()
  Art.field()
@@ -213,13 +228,19 @@ local function inGame()
  FX.draw()
  Feedback.draw()
  Art.ball(Game.ball)
+ Art.pulse(Game.pulseX,Game.pulseY,Game.pulseVisual)
  Art.player(Game.player)
  love.graphics.pop()
  header()
  inventoryBar()
  UI.rect(53,118,265,37,13,{.94,.99,.95})
  Icons.draw('flag',76,136,19,C.mintDark)
- UI.label('Objetivo: '..Game.roundHits..' / '..Game.goal()..' golpes',95,124,UI.fonts.small,C.navy)
+ UI.label(Game.objectiveText()..': '..Game.progress()..'/'..Game.goal(),95,124,UI.fonts.small,C.navy)
+ if Game.state=='playing' then
+  UI.rect(715,117,224,35,11,{.92,.97,1})
+  Icons.draw('spark',737,134,18,C.blue)
+  UI.label(Game.pulseCooldown<=0 and 'ESPACIO: PULSO LISTO' or ('PULSO: '..math.ceil(Game.pulseCooldown)..' s'),754,123,UI.fonts.small,C.navy)
+ end
  if Feedback.combo>1 and Feedback.comboTimer>0 and Game.state=='playing' then
   UI.panel(372,110,256,40,13)
   Icons.draw('spark',397,130,20,C.gold)
@@ -242,7 +263,7 @@ local function inGame()
   Icons.draw('pause',500,206,48,C.blue)
   UI.headline('EN PAUSA',270,248,460,UI.fonts.title,C.navy)
   UI.label('Ranura '..Game.slot..' • Ronda '..Game.round,292,302,UI.fonts.body,C.ink,'center',416)
-  UI.label(Game.noticeT>0 and Game.notice or 'Puedes guardar y continuar más tarde.',292,332,UI.fonts.small,C.muted,'center',416)
+  UI.label('Se guarda automáticamente cada 8 segundos.',292,332,UI.fonts.small,C.muted,'center',416)
   addButton('resume',314,377,372,56,'CONTINUAR',C.mint,'play')
   addButton('save',314,446,176,51,'GUARDAR',C.blue,'save',true)
   addButton('home',508,446,178,51,'SALIR AL MENÚ',C.lilac,'home',true)
@@ -262,6 +283,7 @@ local function inGame()
  end
 end
 function love.load()
+ if ciSmokeRequested() and love.filesystem.setIdentity then love.filesystem.setIdentity('balller_ci',true) end
  UI.load()
  Art.load()
  Save.load()
@@ -269,11 +291,22 @@ function love.load()
  Sound.enabled=Save.sound
  love.math.setRandomSeed(os.time())
  resize(love.graphics.getDimensions())
+ if ciSmokeRequested() then
+  ciFrames=0
+  assert(Game.newRun(1),'No se pudo crear una partida de prueba')
+ end
 end
 function love.resize(w,h) resize(w,h) end
 function love.update(dt)
  dt=math.min(dt,.04)
  Game.update(dt)
+ if ciFrames then
+  ciFrames=ciFrames+1
+  if ciFrames==12 then assert(Game.startRound(),'No inicia la ronda de prueba') end
+  if ciFrames==40 then Game.togglePause() end
+  if ciFrames==50 then Game.togglePause() end
+  if ciFrames>=85 then love.event.quit(0) end
+ end
  mouseX,mouseY=toLogical(love.mouse.getPosition())
 end
 function love.draw()
@@ -316,6 +349,7 @@ local function click(id)
   else Game.notify('No se pudo guardar la partida') end
  elseif id=='replay' then Game.newRun(Game.slot)
  elseif id=='sound' then Save.sound=not Save.sound Sound.enabled=Save.sound Save.store()
+ elseif id=='upgrade' then Game.buyUpgrade()
  elseif id:sub(1,3)=='buy' then Game.buy(tonumber(id:sub(4)))
  elseif id:sub(1,4)=='item' then Objects.selected=tonumber(id:sub(5)) or 1 end
 end
@@ -336,6 +370,7 @@ function love.keypressed(key)
   if Game.state=='menu' then slotIntent='new' Game.state='slots'
   elseif Game.state=='shop' then Game.startRound() end
  elseif Game.state=='playing' then
+  if key=='space' then Game.pulse() return end
   local n=tonumber(key)
   if n and n>=1 and n<=#Objects.types then Objects.selected=n end
  end
