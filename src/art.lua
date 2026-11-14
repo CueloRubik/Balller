@@ -5,6 +5,7 @@ local A=require('src.arena')
 local S=require('src.sprites')
 local O=require('src.objects')
 local Progress=require('src.progression')
+local Prefs=require('src.presentation.preferences')
 local M={}
 local lg=love.graphics
 local function col(c,a) UI.color(c,a) end
@@ -29,14 +30,15 @@ function M.background(t)
  lg.ellipse('fill',930,55,150,65)
 end
 function M.field()
+ if Assets.image(Prefs.theme().image,A.x,A.y,A.w,A.h) then return end
  UI.rect(A.x,A.y+9,A.w,A.h,28,{.57,.74,.57})
  UI.rect(A.x,A.y+4,A.w,A.h,28,{.93,.99,.84})
  UI.rect(A.x,A.y,A.w,A.h,27,{.68,.88,.59})
- lg.setScissor(A.x+12,A.y+12,A.w-24,A.h-24)
  for i=0,9 do
   if i%2==0 then
    col({.44,.72,.45},.12)
-   lg.rectangle('fill',A.x+12+i*100,A.y+12,100,A.h-24)
+   local width=math.min(100,A.w-24-i*100)
+   if width>0 then lg.rectangle('fill',A.x+12+i*100,A.y+12,width,A.h-24) end
   end
  end
  for i=1,18 do
@@ -51,7 +53,6 @@ function M.field()
  lg.circle('line',A.x+A.w/2,A.y+A.h/2,80)
  lg.line(A.x+A.w/2,A.y+20,A.x+A.w/2,A.y+A.h-20)
  lg.setLineWidth(1)
- lg.setScissor()
 end
 function M.player(p)
  col(C.shadow,.18)
@@ -69,10 +70,10 @@ function M.player(p)
   if math.abs(p.dx)>math.abs(p.dy) then dir=p.dx>0 and 1 or 3
   else dir=p.dy>=0 and 0 or 2 end
  end
- local bump=p.hit>0 and .06*math.sin((.16-p.hit)*40) or 0
- local bounce=moving and math.sin(p.walk*2)*1.4 or 0
+ local bump=not Prefs.reduced and p.hit>0 and .06*math.sin((.16-p.hit)*40) or 0
+ local bounce=not Prefs.reduced and moving and math.sin(p.walk*2)*1.4 or 0
  S.draw(name,p.x,p.y+bounce,dir*4+step+1,79*(1+bump))
- if p.hit>0 then
+ if p.hit>0 and not Prefs.reduced then
   col(C.paper,p.hit*2)
   lg.setLineWidth(3)
   lg.circle('line',p.x,p.y,25+(1-p.hit/.16)*15)
@@ -81,6 +82,10 @@ function M.player(p)
 end
 function M.pulse(x,y,life)
  if not x or not y or life<=0 then return end
+ if Prefs.reduced then
+  col(C.blue,.65) lg.setLineWidth(2) lg.circle('line',x,y,175) lg.setLineWidth(1)
+  return
+ end
  local amount=1-life/.42
  col(C.blue,.35*(1-amount))
  lg.setLineWidth(5)
@@ -91,7 +96,7 @@ function M.pulse(x,y,life)
  lg.setLineWidth(1)
 end
 function M.ball(b)
- for i=#b.trail,1,-1 do
+ for i=Prefs.reduced and 0 or #b.trail,1,-1 do
   local p=b.trail[i]
   col(C.gold,(1-i/#b.trail)*.13)
   lg.circle('fill',p.x,p.y,13*(1-i/14))
@@ -101,7 +106,7 @@ function M.ball(b)
  local frame=math.floor(b.spin*1.273)%8+1
  S.draw(Progress.skinSprite(),b.x,b.y,frame,62)
  if (b.guard or 0)>0 then
-  col(C.blue,.23) lg.circle('fill',b.x,b.y,37+math.sin(b.guard*7)*2)
+  col(C.blue,.23) lg.circle('fill',b.x,b.y,37+(Prefs.reduced and 0 or math.sin(b.guard*7)*2))
   col(C.paper,.88) lg.setLineWidth(3) lg.circle('line',b.x,b.y,37) lg.setLineWidth(1)
  end
 end
@@ -112,9 +117,9 @@ function M.hazards(hazards,t)
   local name=names[h.kind] or 'spikes'
   local tint=(h.kind==1 or h.kind==3) and C.red or (h.kind==2 and C.gold or (h.kind==4 and {1,.67,.22} or (h.kind==6 and C.gold or C.lilac)))
   if not active then
-   local pulse=math.sin(t*10)^2
+   local pulse=Prefs.reduced and .5 or math.sin(t*10)^2
    col(tint,.10+pulse*.14)
-   lg.circle('fill',h.x,h.y,h.r+17+math.sin(t*8)*2)
+   lg.circle('fill',h.x,h.y,h.r+17+(Prefs.reduced and 0 or math.sin(t*8)*2))
    col(tint,.86)
    lg.setLineWidth(4)
    lg.circle('line',h.x,h.y,h.r+8)
@@ -143,7 +148,7 @@ function M.hazards(hazards,t)
     col(charged and C.red or C.blue,charged and .12 or .08)
     lg.circle('fill',h.x,h.y,h.r+13)
    elseif h.kind==5 then
-    col(C.lilac,.09+.05*math.sin(t*5)^2)
+    col(C.lilac,Prefs.reduced and .11 or (.09+.05*math.sin(t*5)^2))
     lg.circle('fill',h.x,h.y,145)
     col(C.lilac,.28)
     lg.setLineWidth(2)
@@ -181,7 +186,7 @@ function M.objects(objects,t)
    lg.circle('line',o.x,o.y,r)
    lg.setLineWidth(1)
   end
-  local pulse=1+(o.fx>0 and .10*math.sin(t*25) or .018*math.sin(t*5))
+  local pulse=Prefs.reduced and 1 or 1+(o.fx>0 and .10*math.sin(t*25) or .018*math.sin(t*5))
   S.draw(name,o.x,o.y,frame,o.r*2.55*pulse,fade)
   if o.life<4 then
    col(C.paper,.85*fade)
@@ -192,6 +197,7 @@ function M.objects(objects,t)
  end
 end
 function M.mascot(x,y,scale,t)
+ if Prefs.reduced then t=0 end
  lg.push()
  lg.translate(x,y+math.sin(t*2.7)*4)
  col(C.gold,.2)

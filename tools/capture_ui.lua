@@ -4,8 +4,10 @@ function M.install()
  local G=require('src.game')
  local Save=require('src.save')
  local P=require('src.progression')
+ local Prefs=require('src.presentation.preferences')
+ local Assets=require('src.presentation.assets')
  local sizes={{1000,680},{800,600},{1280,720},{1366,768},{1920,1080}}
- local states={'menu','difficulty','slots','shop','collection','achievements','settings','playing','pause','over','store','purchase','milestones','results','store_empty','collection_owned','components'}
+ local states={'menu','difficulty','slots','shop','collection','achievements','settings','playing','pause','over','store','purchase','milestones','results','store_empty','collection_owned','arena_taller','arena_ciudad','playing_notice','playing_tutorial','playing_reduced','playing_fallback','playing_extreme','playing_edge','components'}
  local sizeIndex,stateIndex,frames,pending=1,1,0,false
  local function setup()
   local width,height=unpack(sizes[sizeIndex])
@@ -26,7 +28,19 @@ function M.install()
   local Hub=require('src.screens.hub')
   Results.hide() Hub.challengeTab='achievements' Hub.message=''
   local state=states[stateIndex]
+  Prefs.arena='patio' Prefs.reduced=false
+  require('src.screens.visual_settings').message=''
   G.state=state
+  if state:match('^playing_') then G.state='playing' end
+  if state=='arena_taller' then G.state='playing' Prefs.arena='taller' end
+  if state=='arena_ciudad' then G.state='playing' Prefs.arena='ciudad' end
+  if G.state=='playing' then
+   local function hazard(kind,x,y,r,age)
+    return {kind=kind,x=x,y=y,r=r,age=age,warning=2,active=6,fade=.5,vx=100,vy=0,phase=.5,cooldown=0}
+   end
+   require('src.hazards').list={hazard(1,460,240,29,1.2),hazard(3,740,417,30,3),hazard(5,345,407,34,3)}
+   require('src.objects').list={{kind=1,x=174,y=400,r=32,hits=7,life=18,fullLife=32,phase=0,fx=.15},{kind=5,x=780,y=260,r=27,hits=99,life=18,fullLife=23,phase=0,fx=0}}
+  end
   if state=='store_empty' then G.state='store' P.gems=0 end
   if state=='collection_owned' then G.state='collection' P.owned[2]=true P.skin=2 end
   if state=='milestones' then G.state='achievements' Hub.challengeTab='milestones' P.best={2,5,8,12} end
@@ -42,6 +56,14 @@ function M.install()
   end
   if G.state=='over' then G.reason='¡La pelota tocó los pinchos!' end
   G.shake=0 G.noticeT=0
+  if state=='playing_notice' then G.noticeT=2 G.notice='Elige un punto dentro de la cancha. La defensa sigue en tu mochila.' end
+  if state=='playing_tutorial' then
+   G.startTutorial() G.tutorialStep=3 G.noticeT=0
+   G.ball.x,G.ball.y=G.player.x+60,G.player.y
+  end
+  if state=='playing_reduced' then Prefs.reduced=true G.shake=8 G.pulseVisual=.25 G.pulseX=G.player.x G.pulseY=G.player.y end
+  if state=='playing_extreme' then G.score=99999999 G.coins=99999 G.round=999 G.rescues=9 G.pulseCooldown=9.9 end
+  if state=='playing_edge' then G.ball.x,G.ball.y=210,146 G.player.x,G.player.y=320,151 end
   frames=0
  end
  love.load=function()
@@ -49,8 +71,9 @@ function M.install()
   for slot=1,3 do Save.clearRun(slot) end
   love.filesystem.remove('perfil_balller_v7.txt')
   love.filesystem.remove('perfil_balller_v7.txt.bak')
+  love.filesystem.remove(Prefs.file)
   originalLoad()
-  for _,name in ipairs({'surfaces','icons','backdrop','home-court','meters'}) do
+  for _,name in ipairs({'surfaces','icons','backdrop','home-court','meters','arena-patio','arena-taller','arena-ciudad'}) do
    assert(require('src.presentation.assets').images[name],'Missing UI texture '..name)
   end
   love.math.setRandomSeed(8001)
@@ -76,6 +99,13 @@ function M.install()
   end
  end
  love.draw=function()
+  if states[stateIndex]=='playing_fallback' then
+   local image=Assets.images['arena-patio']
+   Assets.images['arena-patio']=nil
+   originalDraw()
+   Assets.images['arena-patio']=image
+   return
+  end
   if states[stateIndex]~='components' then originalDraw() return end
   local UI=require('src.ui')
   local C=require('src.theme')

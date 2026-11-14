@@ -15,6 +15,9 @@ local Feedback=require('src.feedback')
 local Assets=require('src.presentation.assets')
 local Hub=require('src.screens.hub')
 local Results=require('src.presentation.round_results')
+local VisualSettings=require('src.screens.visual_settings')
+local Prefs=require('src.presentation.preferences')
+local HUD=require('src.presentation.hud_layout')
 local S={}
 local b,hitbox
 local sky={.83,.96,1}
@@ -53,7 +56,7 @@ local function cornerCoins()
  chip(736,18,104,'gem','GEMAS',Progress.gems,C.lilac)
  chip(855,18,111,'trophy','RÉCORD',math.floor(Save.best),C.gold)
 end
-function S.bind(fn,register) b=fn hitbox=register Hub.bind(fn) end
+function S.bind(fn,register) b=fn hitbox=register Hub.bind(fn) VisualSettings.bind(fn) end
 S.hub=Hub
 S.store=Hub.store
 S.confirmPurchase=Hub.confirmPurchase
@@ -131,23 +134,8 @@ end
 function S.collection() Hub.collection() end
 function S.achievements() Hub.challenges() end
 
-function S.settings()
- top('AJUSTES','Opciones sencillas para jugar a tu manera.')
- bgCard(205,155,592,400,cream,28)
- UI.rect(242,197,516,91,20,{.88,.96,1})
- Icons.draw(Save.sound and 'sound' or 'mute',287,241,39,C.blue)
- label('Sonido',326,223,UI.fonts.medium,navy)
- button('sound',545,218,190,53,Save.sound and 'ACTIVADOS' or 'APAGADOS',C.blue,Save.sound and 'sound' or 'mute',true)
- UI.rect(242,311,516,91,20,{.91,.99,.92})
- Icons.draw('help',286,357,37,C.mintDark)
- label('Guía de juego',324,341,UI.fonts.medium,navy)
- button('help',557,333,178,52,'GUÍA',C.mint,'help',true)
- UI.rect(242,428,516,94,20,{1,.95,.84})
- Icons.draw('star',286,473,38,C.gold)
- label('Práctica',324,459,UI.fonts.medium,navy)
- button('tutorial',556,451,179,52,'PRACTICAR',C.gold,'play',true)
- Hub.nav('settings')
-end
+function S.settings() VisualSettings.draw() end
+
 function S.help()
  top('CÓMO JUGAR','Cuatro reglas y listo.')
  local rows={
@@ -201,61 +189,70 @@ end
 local itemPage=1
 function S.setPage(page) itemPage=math.max(1,math.min(2,page)) end
 function S.page() return itemPage end
+local function hudStat(x,w,icon,name,value)
+ Icons.draw(icon,x+23,38,27,C.paper)
+ label(name,x+46,17,UI.fonts.tiny,C.muted)
+ local text=tostring(value)
+ local font=UI.fonts.medium
+ if font:getWidth(text)>w-58 then font=UI.fonts.small end
+ UI.singleLine(text,x+46,35,w-57,font,navy)
+end
 function S.game()
  Art.field()
  love.graphics.push()
- if Game.shake>0 then love.graphics.translate((love.math.random()-.5)*Game.shake,(love.math.random()-.5)*Game.shake) end
+ if Game.shake>0 and not Prefs.reduced then love.graphics.translate(math.sin(Game.t*79)*Game.shake*.5,math.cos(Game.t*91)*Game.shake*.5) end
  Art.hazards(Hazards.list,Game.t)
  Collectibles.draw(Game.t)
  Art.objects(Objects.list,Game.t)
- FX.draw() Feedback.draw()
+ if not Prefs.reduced then FX.draw() Feedback.draw() end
  Art.ball(Game.ball)
  Art.pulse(Game.pulseX,Game.pulseY,Game.pulseVisual)
  Art.player(Game.player)
  love.graphics.pop()
- UI.rect(30,12,940,82,24,cream)
- label('BALLLER',51,22,UI.fonts.medium,navy)
- chip(205,27,154,'star','PUNTOS',math.floor(Game.score),C.gold)
- chip(369,27,128,'flag','RONDA',Game.round,C.mint)
- chip(506,27,142,'clock','TIEMPO',math.ceil(Game.roundLeft)..' s',C.blue)
- chip(656,27,136,'coin','MONEDAS',math.floor(Game.coins),C.gold)
- button('pause',871,26,83,49,'',C.blue,'pause',true)
- UI.rect(48,114,312,44,14,cream)
- Icons.draw('flag',72,136,20,C.mintDark)
- label((Game.tutorial and 'PRÁCTICA '..Game.tutorialStep..'/4') or (Game.objectiveText()..' '..Game.progress()..'/'..Game.goal()),91,126,UI.fonts.small,navy)
- UI.progress(91,151,252,6,Game.progress()/Game.goal(),0)
- UI.rect(729,114,219,44,14,{.91,.96,1})
- Icons.draw('star',750,134,20,C.gold)
- label('RESCATES: '..Game.rescues,767,125,UI.fonts.small,navy)
+ local header=HUD.header
+ UI.panel(header.x,header.y,header.w,header.h)
+ label('BALLLER',49,15,UI.fonts.medium,navy)
+ label(Prefs.theme().name,50,46,UI.fonts.tiny,C.muted)
+ hudStat(205,154,'star','Puntos',math.floor(Game.score))
+ hudStat(369,128,'flag',Game.tutorial and 'Paso' or 'Ronda',Game.tutorial and (Game.tutorialStep..'/4') or Game.round)
+ hudStat(506,142,'clock','Tiempo',Game.tutorial and '--' or (math.ceil(Game.roundLeft)..' s'))
+ hudStat(656,136,'coin','Monedas',math.floor(Game.coins))
+ button('pause',871,16,83,46,'',C.blue,'pause',true)
+ local objective=HUD.objective
+ Icons.draw(Game.tutorial and 'help' or 'objective',objective.x+14,objective.y+15,22,C.mintDark)
+ local objectiveText=Game.tutorial and HUD.tutorialSteps[Game.tutorialStep] or (Game.objectiveText()..' '..Game.progress()..'/'..Game.goal())
+ UI.singleLine(objectiveText or '',objective.x+34,objective.y+2,objective.w-40,UI.fonts.small,navy)
+ UI.progress(objective.x+34,objective.y+27,objective.w-42,5,Game.tutorial and Game.tutorialStep/4 or Game.progress()/Game.goal(),0)
+ local rescue=HUD.rescues
+ Icons.draw('shield',rescue.x+13,80,23,C.gold)
+ label(Game.tutorial and 'Práctica sin peligro' or ('Rescates: '..Game.rescues),rescue.x+35,71,UI.fonts.small,navy)
  for offset=1,4 do
   local i=(itemPage-1)*4+offset
   local item=Objects.types[i]
   local x=91+(offset-1)*152
   local chosen=Objects.selected==i
-  local c=chosen and {.92,1,.82} or cream
-  bgCard(x,563,141,88,c,17)
-  if chosen then UI.outline(x+2,565,137,83,15,C.mintDark,3) end
+  if not Assets.surface(5,chosen and 3 or 0,x,563,141,88) then
+   bgCard(x,563,141,88,cream,17)
+   if chosen then UI.outline(x+2,565,137,83,15,C.mintDark,3) end
+  end
   Sprites.draw(item.sprite,x+44,594,math.floor(Game.t*9)%8+1,65,(Game.inventory[i] or 0)>0 and 1 or .45)
   label('x'..(Game.inventory[i] or 0),x+83,577,UI.fonts.medium,navy)
   label(item.name,x+13,617,UI.fonts.tiny,ink,'center',117)
+  label(tostring(i),x+11,570,UI.fonts.tiny,C.muted)
   hitbox('item'..i,x,565,141,85)
  end
  button('previousPage',41,586,44,51,'',C.blue,'back',true)
  button('nextPage',702,586,44,51,'',C.blue,'next',true)
- label(itemPage..'/2',754,652,UI.fonts.small,navy)
+ label(itemPage..'/2',709,647,UI.fonts.tiny,navy)
  local ready=Game.pulseCooldown<=0
- button('pulse',773,571,179,71,ready and 'PULSO' or math.ceil(Game.pulseCooldown)..' s',ready and C.mint or C.lilac,'spark',true,{disabled=not ready})
+ local pulse=HUD.pulse
+ button('pulse',pulse.x,pulse.y,pulse.w,pulse.h,ready and 'PULSO' or math.ceil(Game.pulseCooldown)..' s',ready and C.mint or C.lilac,'spark',true,{disabled=not ready})
  UI.progress(782,647,160,8,1-Game.pulseCooldown/10,1)
- if Game.noticeT>0 then
-  bgCard(305,175,390,47,cream,14)
-  label(Game.notice,312,189,UI.fonts.small,navy,'center',376)
- end
- if Game.tutorial then
-  local steps={'','Muévete con WASD o flechas','Toca la pelota','Espacio para usar el pulso','Pulsa 1 y coloca una defensa'}
-  bgCard(274,236,452,65,{.93,1,.83},18)
-  label(steps[Game.tutorialStep] or '',289,258,UI.fonts.small,navy,'center',424)
- end
+ label('Espacio',799,659,UI.fonts.tiny,C.muted,'center',128)
+ local status=HUD.status
+ UI.singleLine(Game.noticeT>0 and Game.notice or '1-8: defensa · Clic: colocar',status.x,status.y,status.w,UI.fonts.tiny,Game.noticeT>0 and navy or C.muted)
 end
+
 function S.roundResults()
  local d=Results.data
  if not d then S.shop() return end

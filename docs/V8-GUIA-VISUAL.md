@@ -46,3 +46,7 @@ Son capturas del motor, con datos sintéticos de prueba, no maquetas de funcione
 ## Ampliación B2
 
 Tienda de gemas y Colección ya son destinos distintos. Retos incorpora pestañas de Logros/Hitos con barras PNG, y cada victoria abre un resumen de premios ya recibidos antes del Taller. Las cinco secciones principales comparten navegación inferior. Ver [flujos, pruebas y capturas de B2](V8-FASE-B2.md). Las misiones nuevas y los capítulos siguen pendientes de sus fases funcionales.
+
+## Ampliación B3
+
+Patio, Taller y Ciudad ya tienen PNG de cancha y selección visual en Ajustes, conservando las dimensiones físicas. El HUD deja libre el área jugable y las instrucciones de práctica pasan a la cabecera. El modo reducido conserva las señales útiles de juego y suaviza efectos decorativos. Ver [implementación, pruebas y capturas B3](V8-FASE-B3.md). La asignación a capítulos se hará cuando exista ese sistema de juego.
