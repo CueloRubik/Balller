@@ -106,6 +106,7 @@ end
 
 function love.load()
   UI.load()
+  Art.load()
   Save.load()
   Sound.load()
   Sound.enabled=Save.sound

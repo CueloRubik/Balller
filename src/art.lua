@@ -179,4 +179,76 @@ function M.mascot(x,y,scale,t)
   lg.arc("line",3,8,11,.13,2.65)
   lg.pop()
 end
+
+local atlas
+local quads={}
+function M.load()
+  atlas=lg.newImage("assets/sprites.png")
+  atlas:setFilter("linear","linear")
+  for i=1,8 do
+    local col=(i-1)%4
+    local row=math.floor((i-1)/4)
+    quads[i]=lg.newQuad(col*48,row*48,48,48,192,96)
+  end
+end
+local function sprite(id,x,y,sz,rotation)
+  if not atlas then return end
+  col(C.paper)
+  lg.draw(atlas,quads[id],x,y,rotation or 0,sz/48,sz/48,24,24)
+end
+local oldPlayer=M.player
+function M.player(p)
+  if not atlas then return oldPlayer(p) end
+  col(C.shadow,.19)
+  lg.ellipse("fill",p.x+3,p.y+9,19,11)
+  local angle=math.atan2 and math.atan2(p.dx,-p.dy) or math.atan(p.dx,-p.dy)
+  sprite(1,p.x,p.y,57,angle)
+  if p.hit>0 then
+    col(C.paper,math.min(1,p.hit*4))
+    lg.setLineWidth(3)
+    lg.circle("line",p.x,p.y,28)
+    lg.setLineWidth(1)
+  end
+end
+local oldBall=M.ball
+function M.ball(b)
+  if not atlas then return oldBall(b) end
+  for i=#b.trail,1,-1 do
+    local p=b.trail[i]
+    col(C.gold,(1-i/#b.trail)*.18)
+    lg.circle("fill",p.x,p.y,10)
+  end
+  col(C.shadow,.2)
+  lg.ellipse("fill",b.x+3,b.y+5,17,11)
+  sprite(2,b.x,b.y,43,b.spin)
+end
+local oldHazards=M.hazards
+function M.hazards(hazards,t)
+  if not atlas then return oldHazards(hazards,t) end
+  for _,h in ipairs(hazards) do
+    local active=h.age>=h.warning and h.age<h.warning+h.active
+    if active then
+      col(C.shadow,.22)
+      lg.ellipse("fill",h.x+3,h.y+6,h.r+3,h.r*.76)
+      sprite(h.kind==1 and 3 or 4,h.x,h.y,h.r*2+20)
+    else
+      oldHazards({h},t)
+    end
+  end
+end
+local oldObjects=M.objects
+function M.objects(objects)
+  if not atlas then return oldObjects(objects) end
+  for _,o in ipairs(objects) do
+    col(C.shadow,.2)
+    lg.ellipse("fill",o.x+3,o.y+5,o.r+2,o.r*.7)
+    sprite(4+o.kind,o.x,o.y,o.r*2+16)
+  end
+end
+local oldMascot=M.mascot
+function M.mascot(x,y,scale,t)
+  if not atlas then return oldMascot(x,y,scale,t) end
+  sprite(1,x,y+math.sin(t*2.5)*3,154*scale)
+end
+
 return M
