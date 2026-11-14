@@ -30,6 +30,12 @@ jobs:
         run: lua tests/experience.lua
       - name: Test menus and save slot actions
         run: lua tests/menu_flow.lua
+      - name: Protect v4-v7 saves and isolated slots
+        run: lua tests/v8_compatibility.lua
+      - name: Protect economy and collection circuit
+        run: lua tests/v8_economy.lua
+      - name: Protect constant speed at 30, 60 and 120 fps
+        run: lua tests/v8_physics.lua
       - name: Native LÖVE 2D rendering smoke test
         run: SDL_AUDIODRIVER=dummy LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a timeout 25s love . --ci-smoke
       - name: Package .love distributable
