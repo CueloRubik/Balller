@@ -2,12 +2,12 @@ local U=require('src.util')
 local A=require('src.arena')
 local O={list={},selected=1}
 O.types={
- {name='Escudo',sprite='shield',cost=22,r=32,hits=7,duration=32,desc='Rebota la pelota. 7 golpes.'},
- {name='Impulso',sprite='boost',cost=30,r=24,hits=11,duration=26,desc='Lanza la pelota lejos.'},
- {name='Tapa',sprite='lid',cost=20,r=32,hits=1,duration=16,desc='Cubre una alcantarilla.'},
- {name='Imán',sprite='magnet',cost=38,r=27,hits=99,duration=23,desc='Atrae la pelota.'},
- {name='Ventilador',sprite='fan',cost=35,r=27,hits=99,duration=23,desc='Empuja la pelota.'},
- {name='Reloj',sprite='clock',cost=34,r=27,hits=99,duration=20,desc='Ralentiza la pelota.'}
+ {name='Escudo',sprite='shield',cost=22,r=32,hits=7,duration=32,short='Rebota 7 veces',desc='Rebota la pelota. 7 golpes.'},
+ {name='Impulso',sprite='boost',cost=30,r=24,hits=11,duration=26,short='Rebote potente',desc='Lanza la pelota lejos.'},
+ {name='Tapa',sprite='lid',cost=20,r=32,hits=1,duration=16,short='Cubre una abertura',desc='Cubre una alcantarilla.'},
+ {name='Imán',sprite='magnet',cost=38,r=27,hits=99,duration=23,short='Atrae la pelota',desc='Atrae la pelota.'},
+ {name='Ventilador',sprite='fan',cost=35,r=27,hits=99,duration=23,short='Aleja la pelota',desc='Empuja la pelota.'},
+ {name='Reloj',sprite='clock',cost=34,r=27,hits=99,duration=20,short='Reduce velocidad',desc='Ralentiza la pelota.'}
 }
 function O.clear() O.list={} O.selected=1 end
 function O.place(x,y,p,b,hazards)

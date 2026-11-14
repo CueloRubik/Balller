@@ -1,6 +1,6 @@
 # Balller
 
-**Balller v4** es un juego arcade cenital hecho con **LÖVE 2D y Lua**. La misión es proteger una pelota de peligros durante una serie de rondas. Entre rondas, compras defensas que puedes colocar libremente en el terreno. Una partida termina cuando la pelota toca un peligro mortal.
+**Balller v5** es un juego arcade cenital hecho con **LÖVE 2D y Lua**. La misión es proteger una pelota de peligros durante una serie de rondas. Entre rondas, compras defensas que puedes colocar libremente en el terreno. Una partida termina cuando la pelota toca un peligro mortal.
 
 ## Jugar
 
@@ -28,8 +28,8 @@ No hay monedas sueltas durante una ronda ni compras accidentales al colocar defe
 - **Monedas iniciales:** 40.
 - **Recompensa por superar una ronda:** `18 + 6 × número de ronda`.
 - **Bonus por golpes:** `2 × mínimo(golpes de la ronda, 15)`.
-- **Objetivo opcional:** 5 + número de ronda (máximo 15) golpes para ganar **12 monedas extra**.
-- Ejemplo: en la ronda 1, si golpeas 7 veces, recibes **24 + 14 + 12 = 50 monedas**.
+- **Objetivo opcional variable:** alterna entre golpear la pelota, conseguir rebotes en paredes y colocar defensas. El premio crece gradualmente desde **12 monedas**.
+- Ejemplo: en la ronda 1, si golpeas 7 veces, recibes **24 + 14 + 12 = 50 monedas**. En la ronda 2 la meta son los rebotes en paredes.
 - El **score** es independiente de las monedas. Aumenta por tiempo sobrevivido, golpes, rachas, defensas y rondas superadas. Sirve para superar el récord.
 
 | Defensa | Precio | Función |
@@ -40,6 +40,8 @@ No hay monedas sueltas durante una ronda ni compras accidentales al colocar defe
 | Imán | 38 | La atrae en su radio |
 | Ventilador | 35 | La empuja en su radio |
 | Reloj | 34 | Reduce su velocidad cercana |
+
+Puedes mejorar tus **zapatillas** hasta el nivel 3 pagando **65, 120 y 175 monedas**. Cada nivel aumenta permanentemente la velocidad del personaje en esa partida.
 
 Puedes almacenar hasta **12 objetos** en total, con un máximo de **5 de cada tipo**. Solo se consume una unidad al colocarla correctamente. Las defensas colocadas duran un tiempo limitado y desaparecen entre rondas.
 
@@ -54,7 +56,7 @@ Puedes almacenar hasta **12 objetos** en total, con un máximo de **5 de cada ti
 
 ## Guardado y recuperación
 
-Hay **3 ranuras independientes**. Se guardan automáticamente cuando empieza o termina una ronda, cuando compras, al pausar y al cerrar la aplicación. También puedes pulsar **Guardar** desde la pausa o **Guardar y salir** desde la tienda.
+Hay **3 ranuras independientes**. Se guardan automáticamente cada **8 segundos** de juego, cuando empieza o termina una ronda, cuando compras, al pausar y al cerrar la aplicación. También puedes pulsar **Guardar** desde la pausa o **Guardar y salir** desde la tienda.
 
 **Continuar** en el menú restaura la partida, incluyendo ronda, monedas, inventario, posiciones y peligros. Si la ronda estaba en curso, se reabre pausada. La partida perdida deja de poder continuarse. La opción **Reemplazar** pide confirmación antes de borrar otro guardado.
 
@@ -63,13 +65,14 @@ Los guardados se almacenan en la carpeta de datos de LÖVE bajo la identidad `ba
 - `save.txt`: récord, puntuación histórica, partidas y preferencias de sonido.
 - `partida_1.txt`, `partida_2.txt`, `partida_3.txt`: partidas recuperables.
 
-El lector de guardados valida los campos y no ejecuta código desde archivos de guardado.
+El lector de guardados valida los campos, utiliza una suma de comprobación para nuevas partidas y no ejecuta código desde archivos de guardado. Se conserva un archivo de respaldo `.bak` para recuperar una ranura dañada. Las partidas anteriores siguen siendo compatibles.
 
 ## Controles
 
 | Tecla | Acción |
 | --- | --- |
 | WASD / flechas | Mover al personaje en ocho direcciones |
+| Espacio | Pulso de rescate cercano (10 segundos de recarga) |
 | Clic izquierdo | Colocar la defensa seleccionada |
 | 1–6 | Elegir una defensa de la mochila |
 | Rueda del ratón | Cambiar defensa seleccionada |
@@ -104,3 +107,9 @@ python3 tests/check_sprites.py
 ```
 
 Se pueden ejecutar pruebas de sintaxis con `luac -p`. Estas pruebas no sustituyen una revisión visual dentro de LÖVE.
+
+## Construir versión para compartir
+
+Ejecuta `python3 tools/package_love.py` para generar `dist/Balller-v5.love`. GitHub Actions también comprueba el arranque gráfico con LÖVE y ofrece el `.love` como archivo descargable de la ejecución.
+
+Consulta `docs/PULIDO-V5.md` para conocer las mejoras y `docs/PREPARAR-PUBLICACION.md` para la lista de comprobaciones antes de un lanzamiento oficial.

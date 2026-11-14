@@ -76,6 +76,17 @@ function M.player(p)
   lg.setLineWidth(1)
  end
 end
+function M.pulse(x,y,life)
+ if not x or not y or life<=0 then return end
+ local amount=1-life/.42
+ col(C.blue,.35*(1-amount))
+ lg.setLineWidth(5)
+ lg.circle('line',x,y,24+amount*155)
+ col(C.paper,.25*(1-amount))
+ lg.setLineWidth(2)
+ lg.circle('line',x,y,31+amount*130)
+ lg.setLineWidth(1)
+end
 function M.ball(b)
  for i=#b.trail,1,-1 do
   local p=b.trail[i]

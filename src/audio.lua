@@ -1,6 +1,6 @@
 local M={enabled=true, sounds={}}
 function M.load()
-    local config={hit={440,0.11,0.25},coin={660,0.09,0.2},place={520,0.10,0.2},warn={290,0.18,0.15},lose={165,0.35,0.22},button={720,0.07,0.13},round={530,0.42,0.23}}
+    local config={hit={440,0.11,0.25},coin={660,0.09,0.2},place={520,0.10,0.2},warn={290,0.18,0.15},lose={165,0.35,0.22},button={720,0.07,0.13},round={530,0.42,0.23},pulse={410,0.23,0.21},upgrade={720,0.24,0.20}}
     for name,v in pairs(config) do
         local rate=22050
         local samples=math.floor(rate*v[2])
@@ -9,6 +9,8 @@ function M.load()
             local t=i/rate
             local envelope=(1-i/samples)^2
             local freq=v[1]
+            if name=='pulse' then freq=690-380*(t/v[2]) end
+            if name=='upgrade' then freq=t>.12 and 940 or 720 end
             if name=='round' then
                 if t>.28 then freq=784 elseif t>.14 then freq=659 end
             end
