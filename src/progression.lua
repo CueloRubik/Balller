@@ -1,10 +1,11 @@
 local P={gems=0,stars=0,hits=0,rounds=0,plays=0,best={0,0,0,0},owned={true,false,false,false},skin=1,dirty=false}
 P.skins={
- {name='Original',sprite='ball',cost=0,desc='La pelota de siempre'},
- {name='Océano',sprite='ball_ocean',cost=4,desc='Azul brillante'},
- {name='Fresa',sprite='ball_berry',cost=8,desc='Rosada y divertida'},
- {name='Galaxia',sprite='ball_violet',cost=12,desc='Morada y luminosa'}
+ {name='Original',sprite='ball',desc='La pelota de siempre'},
+ {name='Océano',sprite='ball_ocean',desc='Azul brillante'},
+ {name='Fresa',sprite='ball_berry',desc='Rosada y divertida'},
+ {name='Galaxia',sprite='ball_violet',desc='Morada y luminosa'}
 }
+for i,skin in ipairs(P.skins) do skin.cost=require('data.economy').skinCosts[i] end
 P.achievements={
  {id='hits',name='Buen toque',hint='Golpea 50 veces la pelota',target=50,icon='star'},
  {id='stars',name='Coleccionista',hint='Atrapa 20 estrellas',target=20,icon='spark'},

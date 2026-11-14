@@ -7,6 +7,7 @@ local Help=require('data.object_help')
 local G=require('src.game')
 local Save=require('src.save')
 local Exit=require('src.presentation.exit_flow')
+local Economy=require('src.economy.rules')
 local S={}
 local b
 local function text(s,x,y,font,color,align,w) UI.label(s,x,y,font or UI.fonts.body,color or C.ink,align,w) end
@@ -34,16 +35,16 @@ function S.objectInfo(index)
  Sprites.draw(item.sprite,303,251,math.floor(G.t*8)%8+1,137)
  text('Precio: '..item.cost..' monedas',409,195,UI.fonts.body)
  text('Duración: '..item.duration..' s',409,232,UI.fonts.small,C.muted)
- text('En mochila: '..(G.inventory[index] or 0)..' / 5',409,267,UI.fonts.small,C.muted)
+ text('En mochila: '..(G.inventory[index] or 0)..' / '..Economy.config.perItem,409,267,UI.fonts.small,C.muted)
  text('Saldo: '..G.coins..' monedas',409,299,UI.fonts.small,C.muted)
  text(help.effect,247,326,UI.fonts.body,C.ink,'left',506)
  text(help.placement,247,394,UI.fonts.small,C.muted,'left',506)
  local total=0
  for _,n in ipairs(G.inventory) do total=total+n end
  if G.saveError then UI.singleLine(G.saveError,247,461,506,UI.fonts.tiny,C.red)
- else text('Mochila: '..total..' / 12',247,461,UI.fonts.tiny,C.muted) end
+ else text('Mochila: '..total..' / '..Economy.config.bagCapacity,247,461,UI.fonts.tiny,C.muted) end
  button('infoClose',245,511,221,57,'Cerrar',C.blue,'back')
- button('infoBuy',501,511,254,57,'Comprar '..item.cost,C.mint,'coin',{disabled=G.coins<item.cost or G.inventory[index]>=5 or total>=12})
+ button('infoBuy',501,511,254,57,'Comprar '..item.cost,C.mint,'coin',{disabled=not Economy.canBuy(G,index)})
 end
 function S.pause()
  overlay()
