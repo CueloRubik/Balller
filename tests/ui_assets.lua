@@ -3,7 +3,7 @@ local missing,corrupt=false,false
 love={filesystem={getInfo=function() return not missing and {} or nil end},graphics={
  newImage=function(path)
   if corrupt then error('simulated PNG corruption') end
-  return {setFilter=function() end,getDimensions=function() if path:find('surfaces') then return 1024,640 else return 512,256 end end}
+  return {setFilter=function() end,getDimensions=function() if path:find('surfaces') then return 1024,640 elseif path:find('meters') then return 512,128 else return 512,256 end end}
  end,
  newQuad=function(x,y,w,h,iw,ih)
   assert(x>=0 and y>=0 and w>0 and h>0 and x+w<=iw and y+h<=ih)
@@ -33,8 +33,16 @@ for _=1,20 do A.surface(0,0,0,0,181,39) end
 assert(#quads==count,'Repeated drawing must reuse cached quads')
 for _,name in ipairs({'play','gear','delete','shop','chapter','objective'}) do assert(A.icon(name,32,32,40)) end
 assert(not A.icon('unknown',0,0,24))
+for row=0,3 do for _,ratio in ipairs({0,.01,.5,1,2,-1}) do
+ local start=#calls
+ assert(A.meter(10,20,200,16,ratio,row))
+ for i=start+1,#calls do
+  local c=calls[i]
+  assert(c.x>=10 and c.y==20 and c.x+c.q.w*c.sx<=210.0001)
+ end
+end end
 missing=true A.load()
-assert(not A.surface(0,0,0,0,100,40) and not A.icon('play',0,0,24))
+assert(not A.surface(0,0,0,0,100,40) and not A.icon('play',0,0,24) and not A.meter(0,0,100,10,.5,0))
 missing=false corrupt=true A.load()
 assert(not A.surface(0,0,0,0,100,40) and not A.image('backdrop',0,0,1000,680))
 print('UI atlas: 24 button states, five panels, nine-slice bounds, cache and missing/corrupt fallback OK')

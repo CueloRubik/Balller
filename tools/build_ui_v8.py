@@ -56,6 +56,17 @@ for i,color in enumerate(['#fffdf5','#e3f6f0','#eaf3ff','#fff1d3','#efe9fc']):
     atlas.alpha_composite(im.resize((128,128),Image.Resampling.LANCZOS),(768,i*128))
 atlas.save(OUT/'surfaces.png',optimize=True)
 
+# Illustrated progress tracks and fills: four palettes, two 256x32 tiles per row.
+meters=Image.new('RGBA',(512,128))
+for row,color in enumerate(['#24b98c','#3289dc','#edaa34','#9270db']):
+    for column,fill in enumerate(['#bdcfd3',color]):
+        im,d=canvas(256,32)
+        box(d,(1,3,255,31),'#174958',11)
+        box(d,(1,1,255,28),fill,11,NAVY,1)
+        line(d,[(14,6),(241,6)],'#ffffff85',2)
+        meters.alpha_composite(im.resize((256,32),Image.Resampling.LANCZOS),(column*256,row*32))
+meters.save(OUT/'meters.png',optimize=True)
+
 # Icons share outlines, highlights and silhouettes with the illustrated sprites.
 names=['play','pause','home','help','sound','mute','coin','trophy','clock','star','check','arrows','warning','spark','flag','bag','save','plus','gem','ball','medal','gear','next','back','shop','delete','lock','music','chapter','shield','upgrade','objective']
 icons=Image.new('RGBA',(8*64,4*64))

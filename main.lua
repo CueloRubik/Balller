@@ -6,6 +6,9 @@ local Sound=require('src.audio')
 local Objects=require('src.objects')
 local Progress=require('src.progression')
 local Screens=require('src.v7screens')
+local Results=require('src.presentation.round_results')
+local purchaseIndex=nil
+local purchaseCooldown=0
 
 local W,H=1000,680
 local scale,offsetX,offsetY=1,0,0
@@ -54,7 +57,10 @@ end
 function love.resize(w,h) resize(w,h) end
 function love.update(dt)
  dt=math.min(dt,.04)
+ purchaseCooldown=math.max(0,purchaseCooldown-dt)
+ local previous=Game.state
  Game.update(dt)
+ if previous=='playing' and Game.state=='shop' and not Game.tutorial then Results.show(Game) end
  if Progress.dirty and (Game.state=='shop' or Game.state=='menu') then Progress.save() end
  mouseX,mouseY=logical(love.mouse.getPosition())
  if ciFrames then
@@ -75,11 +81,15 @@ function love.draw()
  elseif Game.state=='difficulty' then Screens.difficulties()
  elseif Game.state=='slots' then Screens.slots()
  elseif Game.state=='confirm' then Screens.slots() buttons={} Screens.confirm(confirmSlot)
+ elseif Game.state=='store' then
+  Screens.store()
+  if purchaseIndex then buttons={} Screens.confirmPurchase(purchaseIndex) end
  elseif Game.state=='collection' then Screens.collection()
  elseif Game.state=='achievements' then Screens.achievements()
  elseif Game.state=='settings' then Screens.settings()
  elseif Game.state=='help' then Screens.help()
- elseif Game.state=='shop' then Screens.shop()
+ elseif Game.state=='shop' then
+  if Results.visible then Screens.roundResults() else Screens.shop() end
  elseif Game.state=='tutorialDone' then Screens.tutorialDone()
  else
   Screens.game()
@@ -90,14 +100,18 @@ end
 local function click(id)
  Sound.play('button')
  if id=='new' then
+  Results.hide() purchaseIndex=nil
   Game.state='difficulty'
  elseif id=='continue' then
   Game.state='slots'
- elseif id=='collection' or id=='achievements' or id=='settings' or id=='help' then
+ elseif id=='menu' or id=='store' or id=='collection' or id=='achievements' or id=='settings' or id=='help' then
+  Results.hide() purchaseIndex=nil
   Game.state=id
  elseif id=='back' then
+  Results.hide() purchaseIndex=nil
   Game.backToMenu()
  elseif id=='tutorial' then
+  Results.hide() purchaseIndex=nil
   Game.startTutorial()
  elseif id=='toDifficulty' or id=='replay' then
   Game.tutorial=false Game.state='difficulty'
@@ -105,6 +119,7 @@ local function click(id)
   selectedDifficulty=tonumber(id:sub(11)) or 2
   Game.state='slots'
  elseif id:sub(1,4)=='slot' then
+  Results.hide()
   local slot=tonumber(id:sub(5))
   if Save.hasRun(slot) then
    if not Game.loadRun(slot) then Game.notify('Guardado dañado') end
@@ -123,6 +138,33 @@ local function click(id)
   local ok,message=Progress.unlock(tonumber(id:sub(5)))
   Game.notify(message)
   if ok then Sound.play('upgrade') else Sound.play('warn') end
+ elseif id:sub(1,7)=='buySkin' then
+  local index=tonumber(id:sub(8))
+  local item=Progress.skins[index]
+  if purchaseCooldown<=0 and item and not Progress.owned[index] and Progress.gems>=item.cost then purchaseIndex=index end
+ elseif id=='cancelPurchase' then
+  purchaseIndex=nil
+ elseif id=='confirmPurchase' then
+  purchaseCooldown=.3
+  local index=purchaseIndex
+  purchaseIndex=nil
+  if index then
+   local ok,message=Progress.unlock(index)
+   Screens.hub.message=message Screens.hub.messageOk=ok
+   if ok then Sound.play('upgrade') else Sound.play('warn') end
+  end
+ elseif id:sub(1,9)=='equipSkin' then
+  local index=tonumber(id:sub(10))
+  if Progress.owned[index] then
+   local ok,message=Progress.unlock(index)
+   Screens.hub.message=message Screens.hub.messageOk=ok
+   Game.notify(message)
+   if ok then Sound.play('upgrade') else Sound.play('warn') end
+  end
+ elseif id=='challengeAchievements' then Screens.hub.challengeTab='achievements'
+ elseif id=='challengeMilestones' then Screens.hub.challengeTab='milestones'
+ elseif id=='resultsContinue' then Results.hide()
+ elseif id=='resultsHome' then Results.hide() Game.backToMenu()
  elseif id=='upgrade' then
   Game.buyUpgrade()
  elseif id:sub(1,3)=='buy' then
@@ -141,6 +183,7 @@ local function click(id)
  elseif id=='save' then
   Game.saveRun()
  elseif id=='home' then
+  Results.hide() purchaseIndex=nil
   Game.backToMenu()
  end
 end
@@ -159,12 +202,16 @@ function love.mousepressed(x,y,button)
 end
 function love.keypressed(key)
  if key=='escape' or key=='p' then
+  if purchaseIndex then purchaseIndex=nil return end
+  if Results.visible then Results.hide() Game.backToMenu() return end
   if Game.state=='playing' or Game.state=='pause' then Game.togglePause()
   elseif Game.state=='confirm' then Game.state='slots'
   elseif Game.state~='over' then Game.backToMenu() end
  elseif key=='return' or key=='kpenter' then
   if Game.state=='menu' or Game.state=='tutorialDone' then Game.state='difficulty'
-  elseif Game.state=='shop' then Game.startRound() end
+  elseif Game.state=='shop' then
+   if Results.visible then Results.hide() else Game.startRound() end
+  end
  elseif Game.state=='playing' then
   if key=='space' then Game.pulse() return end
   local n=tonumber(key)
@@ -188,5 +235,6 @@ function love.quit()
  if not Game.tutorial and (Game.state=='playing' or Game.state=='pause' or Game.state=='shop') then Game.saveRun() end
 end
 for _,value in pairs(arg or {}) do
- if value=='--visual-check' then require('tools.capture_ui').install() break end
+ if value=='--visual-check' then require('tools.capture_ui').install() break
+ elseif value=='--ci-flow' then require('tools.native_flow').install() break end
 end

@@ -13,6 +13,8 @@ local Collectibles=require('src.collectibles')
 local FX=require('src.particles')
 local Feedback=require('src.feedback')
 local Assets=require('src.presentation.assets')
+local Hub=require('src.screens.hub')
+local Results=require('src.presentation.round_results')
 local S={}
 local b,hitbox
 local sky={.83,.96,1}
@@ -51,7 +53,10 @@ local function cornerCoins()
  chip(736,18,104,'gem','GEMAS',Progress.gems,C.lilac)
  chip(855,18,111,'trophy','RÉCORD',math.floor(Save.best),C.gold)
 end
-function S.bind(fn,register) b=fn hitbox=register end
+function S.bind(fn,register) b=fn hitbox=register Hub.bind(fn) end
+S.hub=Hub
+S.store=Hub.store
+S.confirmPurchase=Hub.confirmPurchase
 function S.home()
  label('BALLLER',56,23,UI.fonts.big,navy)
  label('Una pelota. Mil formas de salvarla.',60,105,UI.fonts.body,C.mintDark)
@@ -68,14 +73,7 @@ function S.home()
  button('new',664,276,248,78,'JUGAR',C.mint,'play',false,{selected=true})
  button('continue',665,370,245,61,'Mis partidas',C.blue,'save',true)
  button('tutorial',664,449,245,57,'Practicar',C.gold,'help',true)
- for i,v in ipairs({{'collection','Colección','ball',C.blue},{'achievements','Logros','medal',C.gold},{'settings','Ajustes','gear',C.lilac}}) do
-  local x=57+(i-1)*305
-  bgCard(x,558,283,82,C.paper,18)
-  Icons.draw(v[3],x+43,597,45,C.paper)
-  label(v[2],x+83,580,UI.fonts.medium,navy)
-  Icons.draw('next',x+252,598,19,C.blue)
-  hitbox(v[1],x,560,282,74)
- end
+ Hub.nav('menu')
 end
 function S.difficulties()
  top('ELIGE TU NIVEL','Puedes cambiarlo al crear otra partida.')
@@ -130,46 +128,9 @@ function S.confirm(slot)
  button('cancel',296,412,194,57,'CANCELAR',C.blue,'back',true)
  button('deleteConfirm',509,412,192,57,'BORRAR',C.red,'delete',true)
 end
-function S.collection()
- top('COLECCIÓN','Personaliza tu pelota con gemas ganadas jugando.')
- chip(782,29,168,'gem','TUS GEMAS',Progress.gems,C.lilac)
- for i,skin in ipairs(Progress.skins) do
-  local x=60+(i-1)*232
-  bgCard(x,175,216,346,i%2==0 and {.87,.96,1} or cream,27)
-  UI.rect(x+22,194,172,173,80,i%2==0 and {.71,.88,1} or {.95,.9,.7})
-  Sprites.draw(skin.sprite,x+108,282,math.floor(Game.t*9)%8+1,152)
-  label(skin.name,x+14,377,UI.fonts.medium,navy,'center',188)
-  label(skin.desc,x+12,417,UI.fonts.small,C.muted,'center',190)
-  if Progress.skin==i then
-   button('skin'..i,x+16,453,183,49,'EQUIPADA',C.mint,'check',true,{selected=true})
-  elseif Progress.owned[i] then
-   button('skin'..i,x+16,453,183,49,'EQUIPAR',C.blue,'check',true)
-  else
-   button('skin'..i,x+16,453,183,49,skin.cost..' GEMAS',C.lilac,Progress.gems>=skin.cost and 'gem' or 'lock',true,{disabled=Progress.gems<skin.cost})
-  end
- end
- bgCard(114,553,771,80,{.91,.99,.91},20)
- Icons.draw('spark',156,587,32,C.gold)
- label('¡Gana gemas al superar rondas 3, 6, 9... y conseguir logros!',187,565,UI.fonts.body,navy)
- label('Sin compras reales ni recompensas aleatorias.',188,595,UI.fonts.small,C.muted)
-end
-function S.achievements()
- top('TUS LOGROS','Desbloqueos permanentes, sin límite de tiempo.')
- for i,a in ipairs(Progress.achievements) do
-  local x=80+((i-1)%2)*441
-  local y=158+math.floor((i-1)/2)*217
-  local n,max=Progress.progress(a)
-  bgCard(x,y,411,189,i%2==0 and {.88,.96,1} or {.95,.99,.88},23)
-  UI.rect(x+18,y+18,65,64,20,i%2==0 and C.blue or C.gold)
-  Icons.draw(a.icon,x+50,y+49,34,C.paper)
-  label(a.name,x+95,y+20,UI.fonts.medium,navy)
-  label(a.hint,x+94,y+56,UI.fonts.small,C.muted)
-  UI.rect(x+23,y+115,362,18,9,{.72,.83,.84})
-  UI.rect(x+23,y+115,math.max(4,362*(n/max)),18,9,n>=max and C.gold or C.mint)
-  label(n..' / '..max,x+23,y+142,UI.fonts.small,navy)
-  if n>=max then Icons.draw('check',x+357,y+154,26,C.mintDark) end
- end
-end
+function S.collection() Hub.collection() end
+function S.achievements() Hub.challenges() end
+
 function S.settings()
  top('AJUSTES','Opciones sencillas para jugar a tu manera.')
  bgCard(205,155,592,400,cream,28)
@@ -185,6 +146,7 @@ function S.settings()
  Icons.draw('star',286,473,38,C.gold)
  label('Práctica',324,459,UI.fonts.medium,navy)
  button('tutorial',556,451,179,52,'PRACTICAR',C.gold,'play',true)
+ Hub.nav('settings')
 end
 function S.help()
  top('CÓMO JUGAR','Cuatro reglas y listo.')
@@ -261,6 +223,7 @@ function S.game()
  UI.rect(48,114,312,44,14,cream)
  Icons.draw('flag',72,136,20,C.mintDark)
  label((Game.tutorial and 'PRÁCTICA '..Game.tutorialStep..'/4') or (Game.objectiveText()..' '..Game.progress()..'/'..Game.goal()),91,126,UI.fonts.small,navy)
+ UI.progress(91,151,252,6,Game.progress()/Game.goal(),0)
  UI.rect(729,114,219,44,14,{.91,.96,1})
  Icons.draw('star',750,134,20,C.gold)
  label('RESCATES: '..Game.rescues,767,125,UI.fonts.small,navy)
@@ -282,6 +245,7 @@ function S.game()
  label(itemPage..'/2',754,652,UI.fonts.small,navy)
  local ready=Game.pulseCooldown<=0
  button('pulse',773,571,179,71,ready and 'PULSO' or math.ceil(Game.pulseCooldown)..' s',ready and C.mint or C.lilac,'spark',true,{disabled=not ready})
+ UI.progress(782,647,160,8,1-Game.pulseCooldown/10,1)
  if Game.noticeT>0 then
   bgCard(305,175,390,47,cream,14)
   label(Game.notice,312,189,UI.fonts.small,navy,'center',376)
@@ -291,6 +255,20 @@ function S.game()
   bgCard(274,236,452,65,{.93,1,.83},18)
   label(steps[Game.tutorialStep] or '',289,258,UI.fonts.small,navy,'center',424)
  end
+end
+function S.roundResults()
+ local d=Results.data
+ if not d then S.shop() return end
+ bgCard(177,98,646,478,cream,29)
+ Icons.draw('trophy',500,154,68,C.gold)
+ UI.headline('¡Ronda '..d.round..' superada!',218,203,564,UI.fonts.title,navy)
+ label('Premios ya añadidos a tus saldos',238,259,UI.fonts.small,C.muted,'center',524)
+ chip(238,305,240,'coin','MONEDAS GANADAS','+'..d.coins,C.gold)
+ chip(518,305,240,'gem','GEMAS AL CERRAR','+'..d.gems,C.lilac)
+ label(d.hits..' golpes · '..d.score..' puntos',250,387,UI.fonts.body,navy,'center',500)
+ label('Prepara tus defensas para la ronda '..d.nextRound,240,428,UI.fonts.small,C.muted,'center',520)
+ button('resultsHome',224,496,208,56,'Guardar y salir',C.blue,'save',true)
+ button('resultsContinue',463,493,309,62,'Ir al taller',C.mint,'bag')
 end
 function S.pause()
  UI.color(C.navy,.43) love.graphics.rectangle('fill',0,0,1000,680)

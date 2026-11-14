@@ -88,3 +88,5 @@ lua tests/v8_physics.lua
 El juego y el paquete siguen identificados como v7 hasta integrar las fases funcionales de v8.
 
 La primera parte visual de B incorpora atlas PNG, 32 iconos, Nunito con licencia y componentes con relieve. Ver [guía visual](docs/V8-GUIA-VISUAL.md) y [pruebas y alcance B1](docs/V8-FASE-B1.md). Paquete de desarrollo: `python3 tools/package_love.py --output Balller-v8-B1.love`. Las capturas del motor se pueden reproducir desde el código fuente con `love . --visual-check`.
+
+B2 separa Tienda de gemas/Colección, reúne logros e hitos en Retos y muestra un resumen al superar una ronda. Ver [alcance y capturas B2](docs/V8-FASE-B2.md). Paquete actual de desarrollo: `python3 tools/package_love.py --output Balller-v8-B2.love`. La prueba nativa del circuito completo con archivos reales se ejecuta desde el checkout con `love . --ci-flow`.

@@ -4,7 +4,7 @@ import zlib
 import hashlib
 
 root=Path(__file__).resolve().parents[1]
-paths={root/'assets/ui/surfaces.png':(1024,640),root/'assets/ui/icons.png':(512,256),root/'assets/ui/backdrop.png':(1000,680),root/'assets/ui/home-court.png':(600,400)}
+paths={root/'assets/ui/surfaces.png':(1024,640),root/'assets/ui/icons.png':(512,256),root/'assets/ui/backdrop.png':(1000,680),root/'assets/ui/home-court.png':(600,400),root/'assets/ui/meters.png':(512,128)}
 icons=sorted((root/'assets/ui/icons').glob('*.png'))
 assert len(icons)==32
 assert len({hashlib.sha256(p.read_bytes()).hexdigest() for p in icons})==32
@@ -32,4 +32,4 @@ for filename in ['Nunito-Regular.ttf','Nunito-ExtraBold.ttf']:
     assert font.read_bytes()[:4]==b'\x00\x01\x00\x00' and font.stat().st_size>10000
 license=(root/'assets/fonts/OFL-Nunito.txt').read_text()
 assert 'SIL OPEN FONT LICENSE Version 1.1' in license and 'Nunito Project Authors' in license
-print('36 valid UI PNGs, 32 unique icons, two TrueType fonts and bundled OFL verified')
+print('37 valid UI PNGs, 32 unique icons, two TrueType fonts and bundled OFL verified')

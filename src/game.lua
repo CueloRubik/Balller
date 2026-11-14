@@ -164,6 +164,7 @@ function G.loadRun(slot)
  G.pulseVisual=0
  G.autosaveClock=0
  G.reward=s.reward
+ G.gemsReward=0
  G.winFlash=0
  G.previousRound=s.previousRound
  G.previousHits=s.previousHits
@@ -226,8 +227,11 @@ function G.endRound()
  local skill=math.min(15,hits)*2
  local goal=G.progress()>=G.goal() and G.bonus() or 0
  G.reward=math.floor((base+skill+goal)*Difficulty.get(G.difficulty).bonus*G.roundMode().reward+.5)
- G.gemsReward=Progress.awardRound(played,G.difficulty)
+ local previousGems,previousCoins=Progress.gems,G.coins
+ Progress.awardRound(played,G.difficulty)
+ G.gemsReward=Progress.gems-previousGems
  G.coins=math.min(99999,G.coins+G.reward)
+ G.reward=G.coins-previousCoins
  G.score=G.score+played*30+goal*5
  G.previousRound=played
  G.previousHits=hits

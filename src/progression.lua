@@ -57,7 +57,7 @@ function P.save()
   local parts={}
   for p in previous:gmatch('[^|]+') do parts[#parts+1]=p end
   if #parts==16 and checksum(table.concat(parts,'|',1,15))==parts[16] then
-   love.filesystem.write(file..'.bak',previous)
+   if not love.filesystem.write(file..'.bak',previous) then return false end
   end
  end
  local ok=love.filesystem.write(file,encode())
@@ -93,10 +93,24 @@ end
 function P.unlock(index)
  local item=P.skins[index]
  if not item then return false,'Apariencia desconocida' end
- if P.owned[index] then P.skin=index P.save() return true,'Equipada' end
- if P.gems<item.cost then return false,'Te faltan '..(item.cost-P.gems)..' gemas' end
- P.gems=P.gems-item.cost P.owned[index]=true P.skin=index P.save()
- return true,'¡Nueva pelota!'
+ local oldGems,oldSkin,oldOwned=P.gems,P.skin,P.owned[index]
+ if not P.owned[index] then
+  if P.gems<item.cost then return false,'Te faltan '..(item.cost-P.gems)..' gemas' end
+  P.gems=P.gems-item.cost
+  P.owned[index]=true
+ end
+ P.skin=index
+ if not P.save() then
+  P.gems,P.skin,P.owned[index]=oldGems,oldSkin,oldOwned
+  return false,'No se pudo guardar. La compra no se ha aplicado.'
+ end
+ return true,oldOwned and 'Equipada' or '¡Nueva pelota!'
+end
+function P.nextMilestone(mode)
+ local best=P.best[mode]
+ if not best or best>=999 then return nil end
+ local round=(math.floor(best/3)+1)*3
+ return {round=round,gems=round%9==0 and 3 or 2,progress=best%3}
 end
 function P.skinSprite() return P.skins[P.skin].sprite end
 function P.progress(a)

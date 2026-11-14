@@ -4,7 +4,7 @@ local iconIndex={}
 for i,name in ipairs(names) do iconIndex[name]=i-1 end
 function M.load()
  M.images={} M.quads={}
- for _,name in ipairs({'surfaces','icons','backdrop','home-court'}) do
+ for _,name in ipairs({'surfaces','icons','backdrop','home-court','meters'}) do
   local path='assets/ui/'..name..'.png'
   if love.filesystem.getInfo(path) then
    local ok,image=pcall(love.graphics.newImage,path)
@@ -62,6 +62,32 @@ function M.surface(column,row,x,y,w,h)
    g.draw(image,q,dx[i],dy[j],0,dw/sw,dh/sh)
   end
  end end
+ g.pop()
+ return true
+end
+function M.meter(x,y,w,h,ratio,row)
+ local image=M.images.meters
+ if not image then return false end
+ local g=love.graphics
+ ratio=math.max(0,math.min(1,ratio or 0))
+ row=math.max(0,math.min(3,row or 0))
+ local function strip(column,width)
+  if width<=0 then return end
+  local edge=math.min(10,width/2)
+  local sx={0,10,246,256}
+  local dx={x,x+edge,x+width-edge,x+width}
+  for i=1,3 do
+   local dw=dx[i+1]-dx[i]
+   if dw>0 then
+    local q=quad('meter-'..column..'-'..row..'-'..i,column*256+sx[i],row*32,sx[i+1]-sx[i],32,image)
+    g.draw(image,q,dx[i],y,0,dw/(sx[i+1]-sx[i]),h/32)
+   end
+  end
+ end
+ g.push('all')
+ g.setColor(1,1,1,1)
+ strip(0,w)
+ strip(1,w*ratio)
  g.pop()
  return true
 end
