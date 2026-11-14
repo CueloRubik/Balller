@@ -42,3 +42,7 @@ Referencias reales de la primera parte:
 ![Pantallas existentes ejecutadas en LÖVE](previews/v8-b1/pantallas-reales.jpg)
 
 Son capturas del motor, con datos sintéticos de prueba, no maquetas de funciones futuras. Algunas estadísticas se fijan para revisar composición. No representan una partida completa ni certifican balance.
+
+## Ampliación B2
+
+Tienda de gemas y Colección ya son destinos distintos. Retos incorpora pestañas de Logros/Hitos con barras PNG, y cada victoria abre un resumen de premios ya recibidos antes del Taller. Las cinco secciones principales comparten navegación inferior. Ver [flujos, pruebas y capturas de B2](V8-FASE-B2.md). Las misiones nuevas y los capítulos siguen pendientes de sus fases funcionales.

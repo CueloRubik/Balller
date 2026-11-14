@@ -5,14 +5,15 @@ function M.install()
  local Save=require('src.save')
  local P=require('src.progression')
  local sizes={{1000,680},{800,600},{1280,720},{1366,768},{1920,1080}}
- local states={'menu','difficulty','slots','shop','collection','achievements','settings','playing','pause','over','components'}
+ local states={'menu','difficulty','slots','shop','collection','achievements','settings','playing','pause','over','store','purchase','milestones','results','store_empty','collection_owned','components'}
  local sizeIndex,stateIndex,frames,pending=1,1,0,false
  local function setup()
   local width,height=unpack(sizes[sizeIndex])
   assert(love.window.setMode(width,height,{resizable=true,vsync=0,msaa=0}))
   love.resize(width,height)
+  love.keypressed('escape')
   assert(G.newRun(1,2))
-  P.gems=12 P.plays=0 P.rounds=0
+  P.gems=12 P.plays=0 P.rounds=0 P.best={0,0,0,0} P.owned={true,false,false,false} P.skin=1
   G.coins=160
   G.round=3
   G.previousRound=2 G.reward=30
@@ -21,7 +22,24 @@ function M.install()
   G.score=230
   G.roundLeft=24
   G.coins=160
-  G.state=states[stateIndex]
+  local Results=require('src.presentation.round_results')
+  local Hub=require('src.screens.hub')
+  Results.hide() Hub.challengeTab='achievements' Hub.message=''
+  local state=states[stateIndex]
+  G.state=state
+  if state=='store_empty' then G.state='store' P.gems=0 end
+  if state=='collection_owned' then G.state='collection' P.owned[2]=true P.skin=2 end
+  if state=='milestones' then G.state='achievements' Hub.challengeTab='milestones' P.best={2,5,8,12} end
+  if state=='results' then
+   G.state='shop' G.previousRound=3 G.round=4 G.reward=40 G.gemsReward=2
+   Results.show(G)
+  end
+  if state=='purchase' then
+   G.state='store'
+   originalDraw()
+   local scale=math.min(width/1000,height/680)
+   love.mousepressed((width-1000*scale)/2+400*scale,(height-680*scale)/2+459*scale,1)
+  end
   if G.state=='over' then G.reason='¡La pelota tocó los pinchos!' end
   G.shake=0 G.noticeT=0
   frames=0
@@ -32,7 +50,7 @@ function M.install()
   love.filesystem.remove('perfil_balller_v7.txt')
   love.filesystem.remove('perfil_balller_v7.txt.bak')
   originalLoad()
-  for _,name in ipairs({'surfaces','icons','backdrop','home-court'}) do
+  for _,name in ipairs({'surfaces','icons','backdrop','home-court','meters'}) do
    assert(require('src.presentation.assets').images[name],'Missing UI texture '..name)
   end
   love.math.setRandomSeed(8001)

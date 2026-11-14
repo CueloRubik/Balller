@@ -97,5 +97,11 @@ function UI.pill(x,y,w,h,icon,label,value,bg,iconC)
  UI.label(label,x+(icon and 47 or 12),y+7,UI.fonts.tiny,C.muted)
  UI.label(value,x+(icon and 47 or 12),y+24,UI.fonts.medium,C.ink)
 end
+function UI.progress(x,y,w,h,ratio,row)
+ ratio=math.max(0,math.min(1,ratio or 0))
+ if Assets.meter(x,y,w,h,ratio,row) then return end
+ UI.rect(x,y,w,h,h/2,{.72,.82,.84})
+ if ratio>0 then UI.rect(x,y,w*ratio,h,h/2,({C.mint,C.blue,C.gold,C.lilac})[(row or 0)+1] or C.mint) end
+end
 function UI.hit(rect,x,y) return U.pointRect(x,y,rect) end
 return UI

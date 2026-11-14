@@ -11,3 +11,5 @@ Recursos dibujados mediante el generador reproducible `tools/build_ui_v8.py`, in
 | home-court.png | Cancha ilustrada del inicio, sin personaje incrustado | RGBA 600×400 |
 
 Regenerar desde la raíz con `python3 tools/build_ui_v8.py` (Pillow 13). El juego usa los PNG ya incluidos y no requiere Python/Pillow. Las fuentes y sus créditos se documentan en `assets/fonts/SOURCES.md`.
+
+B2 añade `meters.png`, RGBA 512×128: cuatro filas de barras (menta, azul, oro, violeta), cada una con pista y relleno de 256×32. Se estiran en tres segmentos horizontales; se conserva la curvatura de los extremos y no se carga un PNG por cada valor de progreso.
