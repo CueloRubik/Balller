@@ -53,9 +53,9 @@ function M.encode(s)
  lines[#lines+1]=p
  lines[#lines+1]=b
  local inventory={'I'}
- if #s.inventory~=6 then return nil end
- for i=1,6 do
-  local n=s.inventory[i]
+ if #s.inventory~=6 and #s.inventory~=8 then return nil end
+ for i=1,8 do
+  local n=s.inventory[i] or 0
   if type(n)~='number' or n<0 or n>20 or n%1~=0 then return nil end
   inventory[#inventory+1]=tostring(n)
  end
@@ -66,6 +66,14 @@ function M.encode(s)
  local pulse=s.pulseCooldown or 0
  if boots%1~=0 or boots<0 or boots>3 or walls<0 or walls>10000 or placed<0 or placed>10000 or pulse<0 or pulse>30 then return nil end
  lines[#lines+1]=table.concat({'X',boots,walls,placed,string.format('%.5f',pulse)},'|')
+ local difficulty=s.difficulty or 2
+ local rescues=s.rescues or 0
+ local guard=s.ball.guard or 0
+ local portalCd=s.ball.portalCooldown or 0
+ local invuln=s.rescueInvuln or 0
+ if invuln<0 or invuln>10 then return nil end
+ if difficulty<1 or difficulty>4 or difficulty%1~=0 or rescues<0 or rescues>9 or rescues%1~=0 or guard<0 or guard>30 or portalCd<0 or portalCd>10 then return nil end
+ lines[#lines+1]=table.concat({'D',difficulty,rescues,string.format('%.5f',guard),string.format('%.5f',portalCd),string.format('%.5f',invuln)},'|')
  if #s.hazards>24 or #s.objects>50 then return nil end
  for _,h in ipairs(s.hazards) do
   local line=row('H',h,hazardKeys)
@@ -106,11 +114,15 @@ function M.decode(text)
  s.ball=fields(split(lines[4]),ballKeys,-100000,100000)
  if not s.player or not s.ball then return nil end
  local iv=split(lines[5])
- if #iv~=7 or iv[1]~='I' then return nil end
+ if (#iv~=7 and #iv~=9) or iv[1]~='I' then return nil end
  s.inventory={}
- for i=1,6 do
-  local n=number(iv[i+1],0,10)
-  if not n or n%1~=0 then return nil end
+ for i=1,8 do
+  local n=0
+  if i<#iv then
+   n=number(iv[i+1],0,10)
+   if not n then return nil end
+  end
+  if n%1~=0 then return nil end
   s.inventory[i]=n
  end
  s.boots,s.wallBounces,s.placed,s.pulseCooldown=0,0,0,0
@@ -126,18 +138,34 @@ function M.decode(text)
   s.boots,s.wallBounces,s.placed,s.pulseCooldown=boots,walls,placed,pulse
   start=7
  end
+ s.difficulty,s.rescues,s.rescueInvuln=2,0,0
+ s.ball.guard,s.ball.portalCooldown=0,0
+ if lines[start] and lines[start]:sub(1,2)=='D|' then
+  local extra=split(lines[start])
+  if #extra~=5 and #extra~=6 then return nil end
+  local difficulty=number(extra[2],1,4)
+  local rescues=number(extra[3],0,9)
+  local guard=number(extra[4],0,30)
+  local portal=number(extra[5],0,10)
+  local invuln=#extra==6 and number(extra[6],0,10) or 0
+  if not invuln then return nil end
+  if not difficulty or difficulty%1~=0 or not rescues or rescues%1~=0 or not guard or not portal then return nil end
+  s.difficulty,s.rescues,s.rescueInvuln=difficulty,rescues,invuln
+  s.ball.guard,s.ball.portalCooldown=guard,portal
+  start=start+1
+ end
  s.hazards={}
  s.objects={}
  for i=start,#lines-1 do
   local parts=split(lines[i])
   if parts[1]=='H' then
    local h=fields(parts,hazardKeys,-100000,100000)
-   if not h or h.kind%1~=0 or h.kind<1 or h.kind>5 then return nil end
+   if not h or h.kind%1~=0 or h.kind<1 or h.kind>7 then return nil end
    s.hazards[#s.hazards+1]=h
    if #s.hazards>24 then return nil end
   elseif parts[1]=='O' then
    local o=fields(parts,objectKeys,-100000,100000)
-   if not o or o.kind%1~=0 or o.kind<1 or o.kind>6 then return nil end
+   if not o or o.kind%1~=0 or o.kind<1 or o.kind>8 then return nil end
    s.objects[#s.objects+1]=o
    if #s.objects>50 then return nil end
   else

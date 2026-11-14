@@ -8,7 +8,8 @@ local FX=require('src.particles')
 local Sound=require('src.audio')
 local Save=require('src.save')
 local Feedback=require('src.feedback')
-local G={state='menu',winFlash=0,slot=nil,score=0,coins=0,time=0,spawn=0,t=0,notice='',noticeT=0,reason='',shake=0,round=1,roundLeft=0,roundDuration=0,roundHits=0,wallBounces=0,placed=0,boots=0,pulseCooldown=0,pulseVisual=0,autosaveClock=0,reward=0,previousRound=0,previousHits=0,inventory={0,0,0,0,0,0}}
+local Difficulty=require('src.difficulty')
+local G={state='menu',winFlash=0,slot=nil,score=0,coins=0,time=0,spawn=0,t=0,notice='',noticeT=0,reason='',shake=0,round=1,roundLeft=0,roundDuration=0,roundHits=0,wallBounces=0,placed=0,boots=0,pulseCooldown=0,pulseVisual=0,autosaveClock=0,difficulty=2,rescues=0,rescueInvuln=0,tutorial=false,tutorialStep=0,tutorialWalk=0,reward=0,previousRound=0,previousHits=0,inventory={0,0,0,0,0,0}}
 local function copyArray(list)
  local result={}
  for i,entry in ipairs(list) do
@@ -68,7 +69,7 @@ function G.buyUpgrade()
  return true
 end
 function G.duration()
- return math.min(55,28+(G.round-1)*2)
+ return math.min(65,math.floor((28+(G.round-1)*2)*Difficulty.get(G.difficulty).roundTime+.5))
 end
 function G.snapshot()
  if G.state~='shop' and G.state~='playing' and G.state~='pause' then return nil end
@@ -76,10 +77,10 @@ function G.snapshot()
  return {
   state=G.state,round=G.round,score=G.score,coins=G.coins,
   time=G.time,roundLeft=G.roundLeft,roundDuration=G.roundDuration,
-  spawn=G.spawn,roundHits=G.roundHits,wallBounces=G.wallBounces,placed=G.placed,boots=G.boots,pulseCooldown=G.pulseCooldown,reward=G.reward,
+  spawn=G.spawn,roundHits=G.roundHits,wallBounces=G.wallBounces,placed=G.placed,boots=G.boots,pulseCooldown=G.pulseCooldown,difficulty=G.difficulty,rescues=G.rescues,rescueInvuln=G.rescueInvuln,reward=G.reward,
   previousRound=G.previousRound,previousHits=G.previousHits,
   player=copyNumbers(G.player),ball=copyNumbers(G.ball),
-  inventory={G.inventory[1],G.inventory[2],G.inventory[3],G.inventory[4],G.inventory[5],G.inventory[6]},hazards=copyArray(H.list),objects=copyArray(O.list)
+  inventory={G.inventory[1],G.inventory[2],G.inventory[3],G.inventory[4],G.inventory[5],G.inventory[6],G.inventory[7],G.inventory[8]},hazards=copyArray(H.list),objects=copyArray(O.list)
  }
 end
 function G.saveRun()
@@ -87,12 +88,17 @@ function G.saveRun()
  local snapshot=G.snapshot()
  return snapshot~=nil and Save.storeRun(snapshot,G.slot)
 end
-function G.newRun(slot)
+function G.newRun(slot,difficulty)
  if not slot or slot<1 or slot>3 then return false end
+ G.difficulty=Difficulty.get(difficulty).id
+ G.tutorial=false
+ G.tutorialStep=0
  G.slot=slot
  G.state='shop'
  G.score=0
  G.coins=40
+ G.rescues=Difficulty.get(G.difficulty).graces
+ G.rescueInvuln=0
  G.round=1
  G.time=0
  G.roundDuration=G.duration()
@@ -112,7 +118,7 @@ function G.newRun(slot)
  G.shake=0
  G.player=Player.new()
  G.ball=Ball.new()
- G.inventory={1,0,1,0,0,0}
+ G.inventory={1,0,1,0,0,0,0,0}
  H.clear()
  O.clear()
  FX.clear()
@@ -126,6 +132,10 @@ function G.loadRun(slot)
  local s=Save.loadRun(slot)
  if not s then return false end
  G.slot=slot
+ G.tutorial=false
+ G.difficulty=Difficulty.get(s.difficulty).id
+ G.rescues=s.rescues or 0
+ G.rescueInvuln=s.rescueInvuln or 0
  G.round=s.round
  G.score=s.score
  G.coins=s.coins
@@ -145,9 +155,12 @@ function G.loadRun(slot)
  G.previousRound=s.previousRound
  G.previousHits=s.previousHits
  G.inventory=s.inventory
+ for i=1,#O.types do G.inventory[i]=G.inventory[i] or 0 end
  G.player=s.player
  G.player.speed=265+G.boots*20
  G.ball=s.ball
+ G.ball.guard=G.ball.guard or 0
+ G.ball.portalCooldown=G.ball.portalCooldown or 0
  G.ball.trail={}
  H.list=s.hazards
  O.list=s.objects
@@ -162,6 +175,8 @@ end
 function G.startRound()
  if G.state~='shop' then return false end
  G.state='playing'
+ G.rescues=Difficulty.get(G.difficulty).graces
+ G.rescueInvuln=0
  G.roundDuration=G.duration()
  G.roundLeft=G.roundDuration
  G.roundHits=0
@@ -170,11 +185,11 @@ function G.startRound()
  G.pulseCooldown=0
  G.pulseVisual=0
  G.autosaveClock=0
- G.spawn=math.max(1.75,5.2-G.round*.25)
+ G.spawn=math.max(1.45,5.2-G.round*.25)*Difficulty.get(G.difficulty).spawn
  G.player=Player.new()
  G.player.speed=265+G.boots*20
  G.ball=Ball.new()
- local increase=1+math.min(.28,(G.round-1)*.045)
+ local increase=(1+math.min(.28,(G.round-1)*.045))*Difficulty.get(G.difficulty).ball
  G.ball.vx=G.ball.vx*increase
  G.ball.vy=G.ball.vy*increase
  H.clear()
@@ -193,7 +208,7 @@ function G.endRound()
  local base=18+6*played
  local skill=math.min(15,hits)*2
  local goal=G.progress()>=G.goal() and G.bonus() or 0
- G.reward=base+skill+goal
+ G.reward=math.floor((base+skill+goal)*Difficulty.get(G.difficulty).bonus+.5)
  G.coins=math.min(99999,G.coins+G.reward)
  G.score=G.score+played*30+goal*5
  G.previousRound=played
@@ -201,7 +216,7 @@ function G.endRound()
  G.round=math.min(999,played+1)
  G.roundDuration=G.duration()
  G.roundLeft=G.roundDuration
- G.spawn=math.max(1.75,5.2-G.round*.25)
+ G.spawn=math.max(1.45,5.2-G.round*.25)*Difficulty.get(G.difficulty).spawn
  G.state='shop'
  G.winFlash=1.8
  G.pulseVisual=0
@@ -221,7 +236,7 @@ function G.finish(reason)
  FX.burst(G.ball.x,G.ball.y,C.red,28)
  Feedback.resetCombo()
  Save.record(G.score)
- if G.slot then Save.clearRun(G.slot) end
+ if G.slot and not G.tutorial then Save.clearRun(G.slot) end
  Sound.play('lose')
 end
 function G.buy(index)
@@ -248,6 +263,7 @@ function G.place(x,y)
  if ok then
   G.inventory[kind]=G.inventory[kind]-1
   G.placed=G.placed+1
+  if G.tutorial and G.tutorialStep==4 then G.tutorialNext() end
   if G.goalKind()=='places' and G.placed==G.goal() then G.notify('¡Objetivo de la ronda cumplido!') end
   FX.burst(x,y,C.mint,11)
   Feedback.pop(x,y-28,'¡COLOCADO!',C.mintDark)
@@ -256,6 +272,46 @@ function G.place(x,y)
  end
  G.notify(value)
  return false
+end
+function G.startTutorial()
+ G.slot=nil
+ G.difficulty=1
+ G.tutorial=true
+ G.tutorialStep=1
+ G.tutorialWalk=0
+ G.state='playing'
+ G.round=1
+ G.score=0
+ G.coins=0
+ G.roundHits=0
+ G.wallBounces=0
+ G.placed=0
+ G.time=0
+ G.roundLeft=180
+ G.roundDuration=180
+ G.pulseCooldown=0
+ G.pulseVisual=0
+ G.rescueInvuln=0
+ G.autosaveClock=0
+ G.spawn=900
+ G.player=Player.new()
+ G.ball=Ball.new()
+ G.ball.vx,G.ball.vy=65,45
+ G.inventory={1,0,1,0,0,0,0,0}
+ H.clear() O.clear() FX.clear() Feedback.reset()
+ G.notify('Mueve a tu personaje con WASD o las flechas')
+ return true
+end
+function G.tutorialNext()
+ G.tutorialStep=G.tutorialStep+1
+ if G.tutorialStep>=5 then
+  G.state='tutorialDone'
+  Save.tutorialDone=true Save.store()
+  Sound.play('round')
+ else
+  local notes={'','Mueve al personaje','Toca la pelota','Acércate y usa ESPACIO','Pulsa 1 y haz clic en la cancha'}
+  G.notify(notes[G.tutorialStep] or '')
+ end
 end
 function G.pulse()
  if G.state~='playing' then return false end
@@ -271,6 +327,7 @@ function G.pulse()
  G.ball.vx,G.ball.vy=nx*460,ny*460
  G.ball.cooldown=.22
  G.pulseCooldown=10
+ if G.tutorial and G.tutorialStep==3 then G.tutorialNext() end
  G.pulseVisual=.42
  G.pulseX,G.pulseY=G.player.x,G.player.y
  G.shake=3
@@ -288,8 +345,26 @@ function G.update(dt)
  FX.update(dt)
  Feedback.update(dt)
  if G.state~='playing' then return end
+ if G.tutorial then
+  G.pulseCooldown=math.max(0,G.pulseCooldown-dt)
+  G.pulseVisual=math.max(0,G.pulseVisual-dt)
+  if G.tutorialStep==1 then
+   if love.keyboard.isDown('w','a','s','d','up','down','left','right') then G.tutorialWalk=G.tutorialWalk+dt end
+   if G.tutorialWalk>=1 then G.tutorialNext() end
+  end
+  Player.update(G.player,dt)
+  Ball.update(G.ball,dt)
+  if Ball.hitPlayer(G.ball,G.player) then
+   G.score=G.score+10
+   if G.tutorialStep==2 then G.tutorialNext() end
+   FX.burst(G.ball.x,G.ball.y,C.gold,7)
+  end
+  O.collide(G.ball) O.update(dt,G.ball)
+  return
+ end
  G.pulseCooldown=math.max(0,G.pulseCooldown-dt)
  G.pulseVisual=math.max(0,G.pulseVisual-dt)
+ G.rescueInvuln=math.max(0,(G.rescueInvuln or 0)-dt)
  G.autosaveClock=G.autosaveClock+dt
  if G.autosaveClock>=8 then
   G.autosaveClock=0
@@ -299,10 +374,11 @@ function G.update(dt)
  G.roundLeft=math.max(0,G.roundLeft-dt)
  G.score=G.score+dt*2
  G.spawn=G.spawn-dt
- local maxHazards=math.min(7,2+math.floor(G.round/2))
+ local mode=Difficulty.get(G.difficulty)
+ local maxHazards=math.min(mode.maxHazards,2+math.floor(G.round/2))
  if G.spawn<=0 then
-  if #H.list<maxHazards and H.spawn(G.player,G.ball,G.round) then Sound.play('warn') end
-  G.spawn=math.max(1.8,5.15-G.round*.27)
+  if #H.list<maxHazards and H.spawn(G.player,G.ball,G.round,mode) then Sound.play('warn') end
+  G.spawn=math.max(1.6,5.15-G.round*.27)*mode.spawn
  end
  Player.update(G.player,dt)
  Ball.update(G.ball,dt,function(x,y)
@@ -337,7 +413,21 @@ function G.update(dt)
  O.update(dt,G.ball)
  local fatal=H.update(dt,G.ball,O.list)
  if fatal then
-  local reasons={pinchos='¡La pelota tocó los pinchos!',alcantarilla='¡La pelota cayó a la alcantarilla!',sierra='¡La sierra alcanzó la pelota!',descarga='¡La descarga eléctrica alcanzó la pelota!'}
+  if G.rescueInvuln>0 then return end
+  if (G.ball.guard or 0)>0 or G.rescues>0 then
+   if (G.ball.guard or 0)>0 then G.ball.guard=0 else G.rescues=G.rescues-1 end
+   G.ball.x,G.ball.y=630,313
+   G.ball.vx,G.ball.vy=180,-150
+   G.ball.cooldown=.4
+   G.ball.portalCooldown=1
+   G.rescueInvuln=1.5
+   G.shake=3
+   FX.burst(630,313,C.blue,18)
+   G.notify('¡Salvada! Protecciones: '..G.rescues)
+   Sound.play('pulse')
+   return
+  end
+  local reasons={pinchos='¡La pelota tocó los pinchos!',alcantarilla='¡La pelota cayó a la alcantarilla!',sierra='¡La sierra alcanzó la pelota!',descarga='¡La descarga eléctrica alcanzó la pelota!',martillo='¡El martillo golpeó la pelota!',laser='¡El láser alcanzó la pelota!'}
   G.finish(reasons[fatal] or 'Se acabó la partida')
  elseif G.roundLeft<=0 then
   G.endRound()
@@ -348,7 +438,8 @@ function G.togglePause()
  elseif G.state=='pause' then G.state='playing' G.autosaveClock=0 end
 end
 function G.backToMenu()
- if G.state=='playing' or G.state=='pause' or G.state=='shop' then G.saveRun() end
+ if not G.tutorial and (G.state=='playing' or G.state=='pause' or G.state=='shop') then G.saveRun() end
+ G.tutorial=false
  G.state='menu'
 end
 return G
