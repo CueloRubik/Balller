@@ -1,69 +1,67 @@
 # Balller
 
-Balller es un juego arcade de vista cenital desarrollado en **LÖVE 2D** con Lua. Protege una pelota durante partidas rápidas: golpea, esquiva los pinchos y cubre las alcantarillas antes de que sea demasiado tarde.
+**Balller** es un videojuego arcade cenital para [LÖVE 2D](https://love2d.org/) 11.4 o posterior. Controla a un personaje y protege una pelota de pinchos y alcantarillas mientras compras y colocas defensas. Cada partida tiene su propia puntuación y puede terminar en cualquier momento.
 
-## Ejecutar
+## Jugar
 
-Instala [LÖVE 11.4](https://love2d.org/) o posterior. Clona este repositorio y ejecuta:
+Desde la carpeta del proyecto ejecuta:
 
 ```bash
 love .
 ```
 
-En macOS también se puede arrastrar la carpeta del proyecto a `love.app`, o abrirla desde LÖVE Studio.
+En macOS puedes abrir el proyecto desde LÖVE Studio o arrastrar la carpeta a la aplicación LÖVE.
 
-## Controles
-
-| Control | Función |
+| Control | Acción |
 |---|---|
-| WASD o flechas | Mover el personaje en todas las direcciones |
-| Clic izquierdo | Colocar la defensa seleccionada |
-| 1, 2, 3 | Seleccionar escudo, impulso o tapa |
-| P o Esc | Pausar o reanudar |
-| Enter | Comenzar o reiniciar |
+| WASD / flechas | Moverse libremente por la cancha |
+| Clic izquierdo | Colocar la defensa elegida |
+| 1, 2, 3 | Elegir escudo, impulsor o tapa |
+| P / Escape | Pausar o reanudar |
+| Enter | Empezar o repetir partida |
 
-## Características
+## Arte y animaciones
 
-- Gráficos claros con sprites originales en `assets/sprites.png`.
-- Menú principal, instrucciones, controles del sonido, pausa y resultados.
-- Pelota con rebotes, movimiento continuo y efectos de colisión.
-- Pinchos y alcantarillas que se anuncian antes de activarse.
-- Escudos, impulsores y tapas comprables durante cada partida.
-- Sistema de monedas, puntuación y récord.
-- Sonidos sintetizados en tiempo real, sin archivos de audio externos.
-- Persistencia local del récord, puntos acumulados, partidas y preferencias.
-- Ventana redimensionable que conserva la proporción del escenario.
-- Tests automatizados de sintaxis y arranque simulado mediante GitHub Actions.
+Cada componente visual tiene **su propio PNG**, en `assets/sprites/`. Las texturas tienen cuadros de **128 × 128 píxeles**: 16 para el personaje (cuatro direcciones) y ocho para cada uno de los seis objetos. Son ilustraciones coloridas con contornos consistentes y animaciones por cuadros, no un único spritesheet compartido.
 
-## Estructura
+Si falta un PNG, el juego puede generar una textura de respaldo con el módulo de dibujo de esa entidad. La documentación completa se encuentra en [`docs/ARTE-Y-ANIMACIONES.md`](docs/ARTE-Y-ANIMACIONES.md).
+
+## Mecánicas y efectos
+
+- Pelota cenital con rebotes en las paredes y contra el personaje.
+- Pinchos que emergen y alcantarillas que se abren tras una advertencia.
+- Tres defensas colocables: escudo, impulsor y tapa.
+- Puntuación, monedas, récord, partidas jugadas y sonido configurable.
+- Rachas temporales de golpes con multiplicadores moderados de puntuación.
+- Texto flotante y pequeñas celebraciones al conseguir hitos, sin interrumpir la partida.
+- Guardado local y partidas que pueden reiniciarse rápidamente.
+
+## Código
 
 ```text
 Balller/
 ├── main.lua
 ├── conf.lua
-├── assets/
-│   └── sprites.png
+├── assets/sprites/
+│   ├── character.png
+│   ├── ball.png
+│   ├── spikes.png
+│   ├── drain.png
+│   ├── shield.png
+│   ├── boost.png
+│   └── lid.png
 ├── src/
-│   ├── arena.lua
-│   ├── art.lua
-│   ├── audio.lua
-│   ├── ball.lua
-│   ├── game.lua
-│   ├── hazards.lua
-│   ├── objects.lua
-│   ├── particles.lua
-│   ├── player.lua
-│   ├── save.lua
-│   ├── theme.lua
-│   ├── ui.lua
-│   └── util.lua
+│   ├── sprites.lua
+│   ├── sprites/        Archivos individuales de dibujo de respaldo
+│   ├── art.lua         Composición de escena y animación
+│   ├── feedback.lua    Rachas, puntos flotantes y celebraciones
+│   ├── game.lua        Bucle de juego
+│   └── ...             Resto de física, audio, datos e interfaz
+├── docs/
 ├── tests/
-│   └── smoke.lua
-└── .github/workflows/lua-checks.yml
+└── tools/
 ```
 
-## Desarrollo
+## Verificaciones
 
-La lógica está separada de los gráficos para facilitar ampliaciones y correcciones. Los sprites originales se agrupan en una hoja de 4 columnas por 2 filas, de 48 píxeles por celda.
-
-La rama `development` es la versión en pruebas. Revisa los controles, la jugabilidad y los gráficos ejecutando LÖVE antes de etiquetar una versión estable.
+`lua tests/smoke.lua` realiza una prueba de arranque simulada. `python3 tests/check_sprites.py` comprueba las dimensiones de las hojas PNG. Las pruebas automatizadas no sustituyen una revisión visual en LÖVE real.
