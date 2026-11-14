@@ -98,3 +98,5 @@ C1 separa Nueva/Continuar y muestra recuperación de copias sin modificar archiv
 C2 completa pausa/guardar-salir con errores visibles, fichas de las ocho defensas y práctica repetible/omitible sin premios. Ver [informe C2](docs/V8-FASE-C2.md) y [progreso general](docs/PROGRESO-V8.md). Paquete actual de desarrollo: `python3 tools/package_love.py --output Balller-v8-C2.love`.
 
 D1 centraliza precios, límites y recompensas, y recupera compras interrumpidas del Taller. Ver [informe D1](docs/V8-FASE-D1.md). Paquete actual de desarrollo: `python3 tools/package_love.py --output Balller-v8-D1.love`. La fase D continúa con premios y coordinación entre perfil y partida.
+
+D2 coordina premios entre ranura y perfil, añade recuperación de compras de cosméticos y conserva el desglose al continuar. Ver [informe D2](docs/V8-FASE-D2.md). Paquete actual: `python3 tools/package_love.py --output Balller-v8-D2.love`. Las fases A–D tienen su implementación principal en desarrollo; sigue E.

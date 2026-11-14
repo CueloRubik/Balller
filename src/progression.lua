@@ -13,39 +13,22 @@ P.achievements={
  {id='plays',name='Siempre listo',hint='Juega 5 partidas',target=5,icon='play'}
 }
 local file='perfil_balller_v7.txt'
-local function checksum(s)
- local a,b=1,0
- for i=1,#s do a=(a+s:byte(i))%65521 b=(b+a)%65521 end
- return tostring(b*65536+a)
-end
-local function encode()
- local parts={'BALLLER_PROFILE_1',P.gems,P.stars,P.hits,P.rounds,P.plays,P.skin}
- for i=1,4 do parts[#parts+1]=P.best[i] end
- for i=1,4 do parts[#parts+1]=P.owned[i] and 1 or 0 end
- local body=table.concat(parts,'|')
- return body..'|'..checksum(body)
-end
-local function read(s)
- if type(s)~='string' or #s>1000 then return false end
- local parts={}
- for part in s:gmatch('[^|]+') do parts[#parts+1]=part end
- if #parts~=16 or parts[1]~='BALLLER_PROFILE_1' then return false end
- local body=table.concat(parts,'|',1,15)
- if checksum(body)~=parts[16] then return false end
- local nums={}
- for i=2,15 do
-  local n=tonumber(parts[i])
-  if not n or n~=n or n%1~=0 or n<0 or n>10000000 then return false end
-  nums[i]=n
- end
- if nums[7]<1 or nums[7]>4 or nums[12]~=1 then return false end
- for i=13,15 do if nums[i]>1 then return false end end
- if nums[7]>1 and nums[11+nums[7]]~=1 then return false end
- P.gems,P.stars,P.hits,P.rounds,P.plays,P.skin=nums[2],nums[3],nums[4],nums[5],nums[6],nums[7]
- for i=1,4 do P.best[i]=nums[7+i] P.owned[i]=nums[11+i]==1 end
+local Codec=require('src.profilefile')
+local Rewards=require('src.reward_transaction')
+local Purchase=require('src.profile_purchase')
+function P.purchasePending() return Purchase.pending() end
+function P.resolvePurchase() return Purchase.recover() end
+function P.export() return Codec.encode(P) end
+function P.import(data)
+ local decoded=Codec.decode(data)
+ if not decoded then return false end
+ for k,v in pairs(decoded) do P[k]=v end
+ P.dirty=false
  return true
 end
+local read=P.import
 function P.load()
+ if Rewards.pending() or not Purchase.recover() then return false end
  local data=love.filesystem.read(file)
  if read(data) then return true end
  local backup=love.filesystem.read(file..'.bak')
@@ -53,15 +36,13 @@ function P.load()
  return false
 end
 function P.save()
+ if Rewards.pending() or not Purchase.recover() then return false end
  local previous=love.filesystem.read(file)
- if previous and #previous<1000 then
-  local parts={}
-  for p in previous:gmatch('[^|]+') do parts[#parts+1]=p end
-  if #parts==16 and checksum(table.concat(parts,'|',1,15))==parts[16] then
-   if not love.filesystem.write(file..'.bak',previous) then return false end
-  end
+ if Codec.decode(previous) then
+  if not love.filesystem.write(file..'.bak',previous) then return false end
  end
- local ok=love.filesystem.write(file,encode())
+ local encoded=P.export()
+ local ok=love.filesystem.write(file,encoded) and love.filesystem.read(file)==encoded
  if ok then P.dirty=false end
  return ok
 end
@@ -76,7 +57,7 @@ function P.track(kind,n)
  end
  P.dirty=true
 end
-function P.awardRound(round,mode)
+function P.awardRound(round,mode,defer)
  local id=math.max(1,math.min(4,math.floor(tonumber(mode) or 2)))
  local prev=P.best[id]
  local gems=0
@@ -88,23 +69,27 @@ function P.awardRound(round,mode)
  end
  P.gems=math.min(10000000,P.gems+gems)
  P.track('rounds',1)
- P.save()
+ if not defer then P.save() end
  return gems
 end
 function P.unlock(index)
+ if Rewards.pending() then return false,'Guarda primero los premios pendientes.' end
+ if not Purchase.recover() then return false,'No se pudo revisar la compra pendiente.' end
  local item=P.skins[index]
  if not item then return false,'Apariencia desconocida' end
  local oldGems,oldSkin,oldOwned=P.gems,P.skin,P.owned[index]
+ local before=P.export()
  if not P.owned[index] then
   if P.gems<item.cost then return false,'Te faltan '..(item.cost-P.gems)..' gemas' end
   P.gems=P.gems-item.cost
   P.owned[index]=true
  end
  P.skin=index
- if not P.save() then
+ if not Purchase.commit(before,P.export()) then
   P.gems,P.skin,P.owned[index]=oldGems,oldSkin,oldOwned
   return false,'No se pudo guardar. La compra no se ha aplicado.'
  end
+ P.dirty=false
  return true,oldOwned and 'Equipada' or '¡Nueva pelota!'
 end
 function P.nextMilestone(mode)

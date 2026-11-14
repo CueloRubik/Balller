@@ -9,16 +9,18 @@ function M.install()
  local RunFlow=require('src.presentation.run_flow')
  local Exit=require('src.presentation.exit_flow')
  local sizes={{1000,680},{800,600},{1280,720},{1366,768},{1920,1080}}
- local states={'menu','difficulty','slots','shop','collection','achievements','settings','playing','pause','over','store','purchase','milestones','results','store_empty','collection_owned','arena_taller','arena_ciudad','playing_notice','playing_tutorial','playing_reduced','playing_fallback','playing_extreme','playing_edge','slots_new','slots_full','slots_backup','slots_damaged','slots_delete','slots_delete_error','slots_recovered','object_help','object_help_portal','pause_save_error','shop_save_error','exit_error','tutorial_done','tutorial_save_error','tutorial_pause','purchase_failed','purchase_pending','purchase_reviewed','upgrades_max','components'}
+ local states={'menu','difficulty','slots','shop','collection','achievements','settings','playing','pause','over','store','purchase','milestones','results','store_empty','collection_owned','arena_taller','arena_ciudad','playing_notice','playing_tutorial','playing_reduced','playing_fallback','playing_extreme','playing_edge','slots_new','slots_full','slots_backup','slots_damaged','slots_delete','slots_delete_error','slots_recovered','object_help','object_help_portal','pause_save_error','shop_save_error','exit_error','tutorial_done','tutorial_save_error','tutorial_pause','purchase_failed','purchase_pending','purchase_reviewed','upgrades_max','rewards_pending','rewards_detail','cosmetic_pending','components'}
  local sizeIndex,stateIndex,frames,pending=1,1,0,false
  local function setup()
   local width,height=unpack(sizes[sizeIndex])
   assert(love.window.setMode(width,height,{resizable=true,vsync=0,msaa=0}))
   love.resize(width,height)
   love.keypressed('escape')
+  assert(G.flushRewards())
   for slot=1,3 do Save.clearRun(slot) end
   assert(G.newRun(1,2))
   P.gems=12 P.plays=0 P.rounds=0 P.best={0,0,0,0} P.owned={true,false,false,false} P.skin=1
+  G.rewardDetails=nil
   G.coins=160
   G.round=3
   G.previousRound=2 G.reward=30
@@ -54,6 +56,24 @@ function M.install()
    love.filesystem.remove=remove
    if state=='purchase_pending' then G.state='slots'
    elseif state=='purchase_reviewed' then G.state='slots' assert(RunFlow.chooseSlot(G,1)) end
+  end
+  if state=='rewards_pending' or state=='rewards_detail' then
+   G.state='playing' G.round=3 G.roundHits=4 G.placed=1
+   P.gems=0 P.rounds=9 P.best={0,0,0,0}
+   local write=love.filesystem.write
+   if state=='rewards_pending' then
+    love.filesystem.write=function(path,data) if path=='perfil_balller_v7.txt' then return false end return write(path,data) end
+   end
+   G.endRound()
+   love.filesystem.write=write
+   Results.show(G)
+  end
+  if state=='cosmetic_pending' then
+   G.state='store'
+   local remove=love.filesystem.remove
+   love.filesystem.remove=function(path) if path=='perfil_balller_v7.txt.purchase' then return false end return remove(path) end
+   assert(not P.unlock(2))
+   love.filesystem.remove=remove
   end
   if state=='upgrades_max' then
    G.state='shop' G.coins=1000
@@ -125,6 +145,7 @@ function M.install()
  end
  love.load=function()
   love.filesystem.setIdentity('balller_visual_v8',true)
+  assert(G.flushRewards())
   for slot=1,3 do Save.clearRun(slot) end
   love.filesystem.remove('perfil_balller_v7.txt')
   love.filesystem.remove('perfil_balller_v7.txt.bak')

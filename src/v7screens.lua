@@ -143,6 +143,7 @@ function S.shop()
   UI.singleLine(Game.saveError,132,129,775,UI.fonts.small,C.red)
  elseif Game.previousRound>0 then
   label('+'..Game.reward..' monedas'..(Game.gemsReward>0 and ' · +'..Game.gemsReward..' gemas' or ''),404,129,UI.fonts.small,C.mintDark)
+  button('lastReward',742,118,178,40,'Ver premio',C.gold,'trophy',true)
  else
   label(Game.roundMode().desc,415,128,UI.fonts.small,C.muted)
  end
@@ -234,6 +235,16 @@ function S.game()
  UI.singleLine(Game.saveError or (Game.noticeT>0 and Game.notice or '1-8: defensa · Clic: colocar'),status.x,status.y,status.w,UI.fonts.tiny,Game.saveError and C.red or (Game.noticeT>0 and navy or C.muted))
 end
 
+function S.rewardPending()
+ UI.color(C.navy,.65) love.graphics.rectangle('fill',0,0,1000,680)
+ bgCard(183,150,634,372,cream,29)
+ Icons.draw('save',500,199,52,C.blue)
+ UI.headline(Game.rewardRecoveryError=='invalid' and 'Registro dañado' or (Progress.purchasePending() and 'Compra pendiente' or 'Premios pendientes'),216,243,568,UI.fonts.title,navy)
+ label(Game.rewardRecoveryError=='invalid' and 'Los archivos se conservan para revisar su recuperación.' or (Progress.purchasePending() and 'La compra no se aplicó. Se revisará su registro.' or 'Se conservará el registro para completar el guardado.'),223,304,UI.fonts.small,C.muted,'center',554)
+ label('Reintenta antes de comprar o empezar otra ronda.',223,340,UI.fonts.small,C.muted,'center',554)
+ button('rewardClose',222,426,190,58,'Cerrar',C.blue,'back',true)
+ button('rewardRetry',440,426,337,58,'Reintentar guardado',C.mint,'save',true)
+end
 function S.roundResults()
  local d=Results.data
  if not d then S.shop() return end
@@ -243,8 +254,12 @@ function S.roundResults()
  label(Game.saveError and 'Premios pendientes de guardar' or 'Premios ya añadidos a tus saldos',238,259,UI.fonts.small,Game.saveError and C.red or C.muted,'center',524)
  chip(238,305,240,'coin','MONEDAS GANADAS','+'..d.coins,C.gold)
  chip(518,305,240,'gem','GEMAS AL CERRAR','+'..d.gems,C.lilac)
- label(d.hits..' golpes · '..d.score..' puntos',250,387,UI.fonts.body,navy,'center',500)
- label('Prepara tus defensas para la ronda '..d.nextRound,240,428,UI.fonts.small,C.muted,'center',520)
+ if d.detail then
+  local r=d.detail
+  label('Base '..r.base..' + golpes '..r.skill..' + objetivo '..r.objective,224,385,UI.fonts.small,navy,'center',552)
+  label('Multiplicador ×'..string.format('%.2f',r.multiplier)..' · '..d.score..' puntos',224,410,UI.fonts.small,C.muted,'center',552)
+ else label(d.hits..' golpes · '..d.score..' puntos',250,387,UI.fonts.body,navy,'center',500) end
+ label(d.detail and d.coins<math.floor((d.detail.base+d.detail.skill+d.detail.objective)*d.detail.multiplier+.5) and 'Se aplicó el límite de monedas del saldo.' or ('Prepara tus defensas para la ronda '..d.nextRound),240,447,UI.fonts.small,C.muted,'center',520)
  button('resultsHome',224,496,208,56,'Guardar y salir',C.blue,'save',true)
  button('resultsContinue',463,493,309,62,'Ir al taller',C.mint,'bag')
 end

@@ -64,24 +64,30 @@ jobs:
         run: lua tests/d1_purchases.lua
       - name: Test purchase UI and recovery at scaled sizes
         run: lua tests/d1_flow.lua
-      - name: Native session, purchase recovery and tutorial with real files
+      - name: Test coordinated rewards and interrupted recovery
+        run: lua tests/d2_rewards.lua
+      - name: Test cosmetic purchase and equipment interruption recovery
+        run: lua tests/d2_cosmetics.lua
+      - name: Test reward retry UI and persisted breakdown
+        run: lua tests/d2_flow.lua
+      - name: Native session, purchases and coordinated rewards with real files
         run: SDL_AUDIODRIVER=dummy LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a timeout 25s love . --ci-flow
       - name: Capture native UI at five resolutions
         run: SDL_AUDIODRIVER=dummy LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a timeout 60s love . --visual-check
       - name: Upload native UI captures
         uses: actions/upload-artifact@v4
         with:
-          name: Balller-v8-D1-native-captures
+          name: Balller-v8-D2-native-captures
           path: ~/.local/share/love/balller_visual_v8/captures/*.png
           if-no-files-found: error
       - name: Native LÖVE 2D rendering smoke test
         run: SDL_AUDIODRIVER=dummy LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a timeout 25s love . --ci-smoke
       - name: Package .love distributable
-        run: python3 tools/package_love.py --output Balller-v8-D1.love
+        run: python3 tools/package_love.py --output Balller-v8-D2.love
       - name: Verify packaged native startup
-        run: SDL_AUDIODRIVER=dummy LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a timeout 25s love dist/Balller-v8-D1.love --ci-smoke
+        run: SDL_AUDIODRIVER=dummy LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a timeout 25s love dist/Balller-v8-D2.love --ci-smoke
       - name: Upload playable build
         uses: actions/upload-artifact@v4
         with:
-          name: Balller-v8-D1-love
-          path: dist/Balller-v8-D1.love
+          name: Balller-v8-D2-love
+          path: dist/Balller-v8-D2.love

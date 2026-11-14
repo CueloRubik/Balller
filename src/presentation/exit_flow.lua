@@ -1,5 +1,9 @@
 local E={visible=false,error='',approved=false}
 function E.attempt(game,profile,save)
+ if not game.flushRewards() then
+  E.visible=true E.error='No se pudieron guardar los premios pendientes.'
+  return false
+ end
  if game.state=='playing' then game.state='pause' end
  local active=game.state=='pause' or game.state=='shop'
  local runOK=not active or game.tutorial or game.saveRun()
