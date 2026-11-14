@@ -96,7 +96,7 @@ function G.saveRun()
  return snapshot~=nil and Save.storeRun(snapshot,G.slot)
 end
 function G.newRun(slot,difficulty)
- if not slot or slot<1 or slot>3 then return false end
+ if type(slot)~='number' or slot%1~=0 or slot<1 or slot>3 then return false end
  G.difficulty=Difficulty.get(difficulty).id
  G.tutorial=false
  G.tutorialStep=0
@@ -130,20 +130,24 @@ function G.newRun(slot,difficulty)
  Ball.enforceSpeed(G.ball,G.ballSpeed())
  Collectibles.clear()
  G.inventory={1,0,1,0,0,0,0,0}
- Progress.track('plays')
- Progress.save()
  H.clear()
  O.clear()
  FX.clear()
  Feedback.reset()
+ if not G.saveRun() then
+  G.state='menu' G.slot=nil
+  G.notify('No se pudo crear la partida. Inténtalo de nuevo.')
+  return false
+ end
+ Progress.track('plays')
+ Progress.save()
  G.notify('Elige tus defensas y empieza la ronda')
- G.saveRun()
  Sound.play('button')
  return true
 end
 function G.loadRun(slot)
- local s=Save.loadRun(slot)
- if not s then return false end
+ local s,status,detail=Save.loadRun(slot)
+ if not s then return false,status end
  G.slot=slot
  G.tutorial=false
  G.difficulty=Difficulty.get(s.difficulty).id
@@ -186,8 +190,8 @@ function G.loadRun(slot)
  G.shake=0
  FX.clear()
  Feedback.reset()
- G.notify(G.state=='shop' and 'Partida cargada' or 'Partida recuperada. Pulsa continuar.')
- return true
+ G.notify(G.state=='shop' and 'Partida cargada' or 'Partida cargada. Pulsa continuar.')
+ return true,status,detail
 end
 function G.startRound()
  if G.state~='shop' then return false end

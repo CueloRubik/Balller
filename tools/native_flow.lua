@@ -6,6 +6,8 @@ function M.install()
  local Save=require('src.save')
  local Results=require('src.presentation.round_results')
  local Prefs=require('src.presentation.preferences')
+ local RunFlow=require('src.presentation.run_flow')
+ local backupBytes=nil
  local frame,paid=0,nil
  local function click(x,y) love.mousepressed(x,y,1) end
  love.load=function()
@@ -32,9 +34,9 @@ function M.install()
    click(500,620)
   elseif frame==35 then assert(G.state=='collection') click(155,459)
   elseif frame==40 then assert(P.skin==1 and P.gems==8) click(116,620)
-  elseif frame==45 then assert(G.state=='menu') click(780,310)
-  elseif frame==50 then assert(G.state=='difficulty') click(250,293)
-  elseif frame==55 then assert(G.state=='slots') click(669,204)
+  elseif frame==45 then assert(G.state=='menu') click(782,394)
+  elseif frame==50 then assert(G.state=='slots')
+  elseif frame==55 then click(669,204)
   elseif frame==60 then assert(G.state=='shop') click(700,620)
   elseif frame==65 then
    assert(G.state=='playing') G.spawn=10000 G.roundLeft=.001
@@ -65,7 +67,22 @@ function M.install()
   elseif frame==115 then
    assert(G.state=='playing' and Prefs.arena=='taller' and Prefs.reduced)
    assert(math.abs(math.sqrt(G.ball.vx^2+G.ball.vy^2)-G.ballSpeed())<.001)
-   print('NATIVE B3 FLOW OK: B2 circuit plus saved court/reduced settings and resumed fixed-speed play')
+   G.togglePause() G.backToMenu()
+   backupBytes=assert(love.filesystem.read('partida_1.txt.bak'))
+   assert(love.filesystem.write('partida_1.txt','CORRUPTO-C1-NATIVE'))
+  elseif frame==120 then click(782,394)
+  elseif frame==125 then
+   assert(G.state=='slots' and love.filesystem.read('partida_1.txt')=='CORRUPTO-C1-NATIVE')
+   click(669,204)
+  elseif frame==130 then
+   assert(RunFlow.recovery and G.state=='pause')
+   assert(love.filesystem.read(RunFlow.recovery.archive)=='CORRUPTO-C1-NATIVE')
+   assert(love.filesystem.read('partida_1.txt.bak')==backupBytes)
+   click(500,467)
+  elseif frame==135 then assert(not RunFlow.recovery and G.state=='pause') click(500,402)
+  elseif frame==140 then
+   assert(G.state=='playing' and P.gems==8 and G.coins==paid)
+   print('NATIVE C1 FLOW OK: store/settings plus read-only slots, archived corruption and acknowledged recovery')
    love.event.quit(0)
   end
  end

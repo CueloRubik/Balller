@@ -18,6 +18,8 @@ local Results=require('src.presentation.round_results')
 local VisualSettings=require('src.screens.visual_settings')
 local Prefs=require('src.presentation.preferences')
 local HUD=require('src.presentation.hud_layout')
+local Flow=require('src.presentation.run_flow')
+local SlotScreens=require('src.screens.run_slots')
 local S={}
 local b,hitbox
 local sky={.83,.96,1}
@@ -56,7 +58,7 @@ local function cornerCoins()
  chip(736,18,104,'gem','GEMAS',Progress.gems,C.lilac)
  chip(855,18,111,'trophy','RÉCORD',math.floor(Save.best),C.gold)
 end
-function S.bind(fn,register) b=fn hitbox=register Hub.bind(fn) VisualSettings.bind(fn) end
+function S.bind(fn,register) b=fn hitbox=register Hub.bind(fn) VisualSettings.bind(fn) SlotScreens.bind(fn) end
 S.hub=Hub
 S.store=Hub.store
 S.confirmPurchase=Hub.confirmPurchase
@@ -73,8 +75,10 @@ function S.home()
  bgCard(636,157,306,378,cream,29)
  Icons.draw('flag',788,193,34,C.mintDark)
  label('¿Otra ronda?',658,219,UI.fonts.medium,navy,'center',264)
- button('new',664,276,248,78,'JUGAR',C.mint,'play',false,{selected=true})
- button('continue',665,370,245,61,'Mis partidas',C.blue,'save',true)
+ local occupied=0
+ for slot=1,3 do if Save.hasRun(slot) then occupied=occupied+1 end end
+ button(occupied<3 and 'new' or 'continue',664,276,248,78,occupied<3 and 'Nueva partida' or 'Ver partidas',C.mint,'play',false,{selected=true})
+ button('continue',665,370,245,61,'Continuar',C.blue,'save',true,{disabled=occupied==0})
  button('tutorial',664,449,245,57,'Practicar',C.gold,'help',true)
  Hub.nav('menu')
 end
@@ -99,38 +103,10 @@ function S.difficulties()
   button('difficulty'..i,x+128,y+131,275,42,'ELEGIR',mode.color,'play',true)
  end
 end
-function S.slots()
- top('TUS PARTIDAS','Guarda, continúa o empieza una aventura nueva.')
- for i=1,3 do
-  local y=140+(i-1)*156
-  bgCard(78,y,843,139,i%2==0 and {.89,.96,1} or {.9,.98,.9},23)
-  UI.rect(95,y+20,87,92,25,i%2==0 and C.blue or C.mint)
-  Icons.draw('flag',139,y+65,45,C.paper)
-  label('PARTIDA '..i,204,y+14,UI.fonts.medium,navy)
-  local info=Save.slotInfo(i)
-  if info then
-   label('Ronda '..info.round..'    '..Difficulty.get(info.difficulty).short,206,y+49,UI.fonts.body,ink)
-   label(math.floor(info.score)..' puntos · '..math.floor(info.coins)..' monedas',206,y+86,UI.fonts.small,C.muted)
-   button('slot'..i,588,y+39,168,57,'SEGUIR',C.mint,'play',true)
-   button('delete'..i,767,y+39,130,57,'BORRAR',C.red,'delete',true)
-  elseif Save.hasRun(i) then
-   label('El guardado está dañado',205,y+72,UI.fonts.body,C.red)
-   button('delete'..i,755,y+39,141,57,'BORRAR',C.red,'delete',true)
-  else
-   label('Espacio disponible',205,y+69,UI.fonts.body,C.muted)
-   button('slot'..i,673,y+39,222,60,'CREAR',C.mint,'plus',true)
-  end
- end
-end
-function S.confirm(slot)
- UI.color(C.navy,.45) love.graphics.rectangle('fill',0,0,1000,680)
- bgCard(251,184,498,310,cream,29)
- Icons.draw('warning',500,238,58,C.red)
- UI.headline('¿BORRAR PARTIDA?',280,280,440,UI.fonts.title,navy)
- label('Se perderá el progreso de la ranura '..slot,291,353,UI.fonts.body,C.muted,'center',418)
- button('cancel',296,412,194,57,'CANCELAR',C.blue,'back',true)
- button('deleteConfirm',509,412,192,57,'BORRAR',C.red,'delete',true)
-end
+function S.slots() SlotScreens.draw() end
+function S.confirm(slot) SlotScreens.confirm(slot) end
+function S.recovery(data) SlotScreens.recovery(data) end
+
 function S.collection() Hub.collection() end
 function S.achievements() Hub.challenges() end
 

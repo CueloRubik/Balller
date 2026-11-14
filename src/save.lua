@@ -36,7 +36,7 @@ end
 function M.storeRun(data,slot)
  local path=slotPath(slot)
  local encoded=Runfile.encode(data)
- if not path or not encoded then return false end
+ if not path or not encoded or not Runfile.decode(encoded) then return false end
  local previous=love.filesystem.read(path)
  if previous and Runfile.decode(previous) then
   local backed=love.filesystem.write(path..'.bak',previous)
@@ -44,26 +44,54 @@ function M.storeRun(data,slot)
  end
  return love.filesystem.write(path,encoded)
 end
+function M.inspectRun(slot)
+ local path=slotPath(slot)
+ if not path then return {status='invalid'} end
+ local meta=love.filesystem.getInfo(path)
+ local raw=love.filesystem.read(path)
+ local data=Runfile.decode(raw)
+ if data then return {status='ready',data=data,modified=meta and meta.modtime} end
+ local backupMeta=love.filesystem.getInfo(path..'.bak')
+ local backup=love.filesystem.read(path..'.bak')
+ data=Runfile.decode(backup)
+ if data then return {status='recoverable',data=data,modified=backupMeta and backupMeta.modtime} end
+ return {status=(meta or backupMeta) and 'damaged' or 'empty'}
+end
+local function preserveDamaged(path,raw)
+ if not love.filesystem.getInfo(path) then return true,nil end
+ if type(raw)~='string' then return false end
+ for index=0,99 do
+  local archived=path..'.damaged'..(index==0 and '' or ('.'..index))
+  if not love.filesystem.getInfo(archived) then
+   if not love.filesystem.write(archived,raw) or love.filesystem.read(archived)~=raw then return false end
+   return true,archived
+  elseif love.filesystem.read(archived)==raw then return true,archived end
+ end
+ return false
+end
 function M.loadRun(slot)
  local path=slotPath(slot)
- if not path or not M.hasRun(slot) then return nil end
- local data=love.filesystem.read(path)
- local parsed=Runfile.decode(data)
- if parsed then return parsed end
+ if not path then return nil,'invalid' end
+ local state=M.inspectRun(slot)
+ if state.status=='ready' then return state.data,'ready' end
+ if state.status~='recoverable' then return nil,state.status end
  local backup=love.filesystem.read(path..'.bak')
- parsed=Runfile.decode(backup)
- if parsed then love.filesystem.write(path,backup) end
- return parsed
+ local parsed=Runfile.decode(backup)
+ if not parsed then return nil,'damaged' end
+ local preserved,archived=preserveDamaged(path,love.filesystem.read(path))
+ if not preserved then return nil,'preserve_failed' end
+ if not love.filesystem.write(path,backup) then return nil,'restore_failed' end
+ if love.filesystem.read(path)~=backup then return nil,'restore_failed' end
+ return parsed,'recovered',{archive=archived,slot=slot}
 end
 function M.clearRun(slot)
  local path=slotPath(slot)
  if not path then return false end
- local result=true
- if love.filesystem.getInfo(path) then result=love.filesystem.remove(path) and result end
- if love.filesystem.getInfo(path..'.bak') then result=love.filesystem.remove(path..'.bak') and result end
- return result
+ if love.filesystem.getInfo(path) and not love.filesystem.remove(path) then return false,'primary_remove_failed' end
+ if love.filesystem.getInfo(path..'.bak') and not love.filesystem.remove(path..'.bak') then return false,'backup_remove_failed' end
+ return true
 end
 function M.slotInfo(slot)
- return M.loadRun(slot)
+ return M.inspectRun(slot).data
 end
 return M
