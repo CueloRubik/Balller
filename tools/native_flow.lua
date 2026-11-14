@@ -133,7 +133,32 @@ function M.install()
    assert(G.state=='menu' and P.gems==practiceGems)
    for slot=1,3 do assert(love.filesystem.read('partida_'..slot..'.txt')==practiceRuns[slot]) end
    assert(love.filesystem.read('perfil_balller_v7.txt')==practiceProfile)
-   print('NATIVE C2 FLOW OK: recovery, quit veto/retry, object help and complete/repeat/skip practice with unchanged runs/profile')
+   click(782,394)
+  elseif frame==273 then assert(G.state=='slots') click(669,204)
+  elseif frame==278 then
+   assert(G.state=='shop')
+   savedWrite=love.filesystem.remove
+   love.filesystem.remove=function(path) if path=='partida_1.txt.purchase' then return false end return savedWrite(path) end
+   paid=G.coins
+   practiceRuns=G.inventory[1]
+   click(173,304)
+  elseif frame==283 then
+   assert(G.coins==paid and G.inventory[1]==practiceRuns and Save.inspectRun(1).pendingPurchase)
+   love.filesystem.remove=savedWrite
+   G.state='menu'
+   love.draw()
+   click(782,394)
+  elseif frame==288 then assert(G.state=='slots') click(669,204)
+  elseif frame==293 then
+   assert(RunFlow.recovery and RunFlow.recovery.kind=='purchase')
+   assert(G.coins==paid and G.inventory[1]==practiceRuns)
+   click(500,467)
+  elseif frame==298 then click(173,304)
+  elseif frame==303 then
+   assert(G.coins==paid-22 and G.inventory[1]==practiceRuns+1)
+   assert(not love.filesystem.getInfo('partida_1.txt.purchase'))
+   assert(G.loadRun(1) and G.coins==paid-22 and G.inventory[1]==practiceRuns+1)
+   print('NATIVE D1 FLOW OK: complete C2 circuit plus interrupted purchase rollback and durable retry')
    love.event.quit(0)
   end
  end

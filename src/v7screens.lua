@@ -21,6 +21,7 @@ local HUD=require('src.presentation.hud_layout')
 local Flow=require('src.presentation.run_flow')
 local SlotScreens=require('src.screens.run_slots')
 local SessionHelp=require('src.screens.session_help')
+local Economy=require('src.economy.rules')
 local S={}
 local b,hitbox
 local sky={.83,.96,1}
@@ -154,16 +155,14 @@ function S.shop()
   label(item.name,x+100,y+15,UI.fonts.small,navy)
   label('x'..(Game.inventory[i] or 0),x+110,y+43,UI.fonts.medium,C.mintDark)
   button('info'..i,x+162,y+52,34,34,'',C.blue,'help',true)
-  local total=0
-  for _,n in ipairs(Game.inventory) do total=total+n end
-  local disabled=Game.coins<item.cost or (Game.inventory[i] or 0)>=5 or total>=12
+  local disabled=not Economy.canBuy(Game,i)
   button('buy'..i,x+14,y+99,181,39,'Comprar '..item.cost,C.mint,'coin',true,{disabled=disabled})
  end
  local cost=Game.upgradeCost()
  UI.rect(87,524,826,41,15,{.86,.95,1})
  Icons.draw('arrows',112,545,26,C.blue)
- label('ZAPATILLAS  '..Game.boots..'/3',143,532,UI.fonts.small,navy)
- label('+'..(Game.boots*20)..' velocidad',345,532,UI.fonts.small,C.muted)
+ label('ZAPATILLAS  '..Game.boots..'/'..#Economy.config.upgrades.costs,143,532,UI.fonts.small,navy)
+ label('+'..(Game.boots*Economy.config.upgrades.speedStep)..' velocidad',345,532,UI.fonts.small,C.muted)
  button('upgrade',697,524,199,37,cost and ('SUBIR  '..cost) or 'COMPLETO',C.blue,'upgrade',true,{disabled=not cost or Game.coins<cost})
  button('home',80,587,230,65,'Guardar y salir',C.blue,'save',true)
  button('round',533,584,390,69,'JUGAR RONDA '..Game.round,C.mint,'play')

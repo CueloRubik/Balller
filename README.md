@@ -96,3 +96,5 @@ B3 añade canchas PNG Patio/Taller/Ciudad, HUD fuera del área jugable y prefere
 C1 separa Nueva/Continuar y muestra recuperación de copias sin modificar archivos al dibujar las ranuras. Ver [alcance C1](docs/V8-FASE-C1.md) y [progreso general](docs/PROGRESO-V8.md). Paquete actual: `python3 tools/package_love.py --output Balller-v8-C1.love`.
 
 C2 completa pausa/guardar-salir con errores visibles, fichas de las ocho defensas y práctica repetible/omitible sin premios. Ver [informe C2](docs/V8-FASE-C2.md) y [progreso general](docs/PROGRESO-V8.md). Paquete actual de desarrollo: `python3 tools/package_love.py --output Balller-v8-C2.love`.
+
+D1 centraliza precios, límites y recompensas, y recupera compras interrumpidas del Taller. Ver [informe D1](docs/V8-FASE-D1.md). Paquete actual de desarrollo: `python3 tools/package_love.py --output Balller-v8-D1.love`. La fase D continúa con premios y coordinación entre perfil y partida.

@@ -9,7 +9,7 @@ function M.install()
  local RunFlow=require('src.presentation.run_flow')
  local Exit=require('src.presentation.exit_flow')
  local sizes={{1000,680},{800,600},{1280,720},{1366,768},{1920,1080}}
- local states={'menu','difficulty','slots','shop','collection','achievements','settings','playing','pause','over','store','purchase','milestones','results','store_empty','collection_owned','arena_taller','arena_ciudad','playing_notice','playing_tutorial','playing_reduced','playing_fallback','playing_extreme','playing_edge','slots_new','slots_full','slots_backup','slots_damaged','slots_delete','slots_delete_error','slots_recovered','object_help','object_help_portal','pause_save_error','shop_save_error','exit_error','tutorial_done','tutorial_save_error','tutorial_pause','components'}
+ local states={'menu','difficulty','slots','shop','collection','achievements','settings','playing','pause','over','store','purchase','milestones','results','store_empty','collection_owned','arena_taller','arena_ciudad','playing_notice','playing_tutorial','playing_reduced','playing_fallback','playing_extreme','playing_edge','slots_new','slots_full','slots_backup','slots_damaged','slots_delete','slots_delete_error','slots_recovered','object_help','object_help_portal','pause_save_error','shop_save_error','exit_error','tutorial_done','tutorial_save_error','tutorial_pause','purchase_failed','purchase_pending','purchase_reviewed','upgrades_max','components'}
  local sizeIndex,stateIndex,frames,pending=1,1,0,false
  local function setup()
   local width,height=unpack(sizes[sizeIndex])
@@ -45,6 +45,19 @@ function M.install()
    end
    require('src.hazards').list={hazard(1,460,240,29,1.2),hazard(3,740,417,30,3),hazard(5,345,407,34,3)}
    require('src.objects').list={{kind=1,x=174,y=400,r=32,hits=7,life=18,fullLife=32,phase=0,fx=.15},{kind=5,x=780,y=260,r=27,hits=99,life=18,fullLife=23,phase=0,fx=0}}
+  end
+  if state=='purchase_failed' or state=='purchase_pending' or state=='purchase_reviewed' then
+   G.state='shop' G.coins=160 assert(G.saveSession())
+   local remove=love.filesystem.remove
+   love.filesystem.remove=function(path) if path=='partida_1.txt.purchase' then return false end return remove(path) end
+   assert(not G.buy(1))
+   love.filesystem.remove=remove
+   if state=='purchase_pending' then G.state='slots'
+   elseif state=='purchase_reviewed' then G.state='slots' assert(RunFlow.chooseSlot(G,1)) end
+  end
+  if state=='upgrades_max' then
+   G.state='shop' G.coins=1000
+   assert(G.buyUpgrade() and G.buyUpgrade() and G.buyUpgrade())
   end
   if state=='object_help' or state=='object_help_portal' then
    G.state='shop' G.coins=160

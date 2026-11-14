@@ -12,6 +12,8 @@ local Difficulty=require('src.difficulty')
 local Progress=require('src.progression')
 local Collectibles=require('src.collectibles')
 local Rounds=require('src.rounds')
+local Economy=require('src.economy.rules')
+local Costs=Economy.config
 local G={state='menu',winFlash=0,slot=nil,score=0,coins=0,time=0,spawn=0,t=0,notice='',noticeT=0,reason='',shake=0,round=1,roundLeft=0,roundDuration=0,roundHits=0,wallBounces=0,placed=0,boots=0,pulseCooldown=0,pulseVisual=0,autosaveClock=0,difficulty=2,rescues=0,rescueInvuln=0,tutorial=false,tutorialStep=0,tutorialWalk=0,roundStars=0,gemsReward=0,reward=0,previousRound=0,previousHits=0,inventory={0,0,0,0,0,0}}
 local function copyArray(list)
  local result={}
@@ -54,23 +56,35 @@ function G.objectiveText()
  if kind=='places' then return 'Defensas colocadas' end
  return 'Golpes a la pelota'
 end
-function G.bonus()
- local base=12+math.min(12,math.floor((G.round-1)/3)*2)
- return G.goalKind()=='places' and base+12 or base
+function G.bonus() return Economy.goalBonus(G.round,G.goalKind()) end
+function G.upgradeCost() return Economy.upgradeCost(G.boots) end
+local function commitPurchase(before,after)
+ if not Save.storePurchase(before,after,G.slot) then
+  G.saveError='Compra no aplicada. El saldo y la mochila no han cambiado.'
+  G.notify(G.saveError) Sound.play('warn')
+  return false
+ end
+ G.coins=after.coins G.inventory=after.inventory G.boots=after.boots
+ local profileOK=not Progress.dirty or Progress.save()
+ local settingsOK=Save.store()
+ if not profileOK then G.saveError='Compra guardada; falta guardar el progreso.'
+ elseif not settingsOK then G.saveError='Compra guardada; faltan ajustes y récords.'
+ else G.saveError=nil G.saveNoticeT=2 end
+ return true
 end
-function G.upgradeCost() return G.boots>=3 and nil or 65+G.boots*55 end
 function G.buyUpgrade()
  if G.state~='shop' then return false end
  local cost=G.upgradeCost()
  if not cost then G.notify('Mejora al máximo nivel') return false end
  if G.coins<cost then G.notify('Te faltan '..(cost-G.coins)..' monedas') Sound.play('warn') return false end
- G.coins=G.coins-cost
- G.boots=G.boots+1
- G.notify('¡Zapatillas nivel '..G.boots..'! +20 de velocidad')
+ local before,after=G.snapshot(),G.snapshot()
+ after.coins=after.coins-cost after.boots=after.boots+1
+ if not commitPurchase(before,after) then return false end
+ G.notify('¡Zapatillas nivel '..G.boots..'! +'..Costs.upgrades.speedStep..' de velocidad')
  Sound.play('upgrade')
- G.saveSession()
  return true
 end
+
 function G.ballSpeed()
  return math.min(365,math.floor((215+math.min(G.round-1,24)*6)*Difficulty.get(G.difficulty).ball+.5))
 end
@@ -135,7 +149,7 @@ function G.newRun(slot,difficulty)
  G.slot=slot
  G.state='shop'
  G.score=0
- G.coins=40
+ G.coins=Costs.initialCoins
  G.rescues=Difficulty.get(G.difficulty).graces
  G.rescueInvuln=0
  G.round=1
@@ -161,7 +175,8 @@ function G.newRun(slot,difficulty)
  G.ball=Ball.new()
  Ball.enforceSpeed(G.ball,G.ballSpeed())
  Collectibles.clear()
- G.inventory={1,0,1,0,0,0,0,0}
+ G.inventory={}
+ for i,n in ipairs(Costs.starter) do G.inventory[i]=n end
  H.clear()
  O.clear()
  FX.clear()
@@ -208,7 +223,7 @@ function G.loadRun(slot)
  G.inventory=s.inventory
  for i=1,#O.types do G.inventory[i]=G.inventory[i] or 0 end
  G.player=s.player
- G.player.speed=265+G.boots*20
+ G.player.speed=265+G.boots*Costs.upgrades.speedStep
  G.ball=s.ball
  Ball.enforceSpeed(G.ball,G.ballSpeed())
  Collectibles.clear()
@@ -241,7 +256,7 @@ function G.startRound()
  G.autosaveClock=0
  G.spawn=math.max(1.45,5.2-G.round*.25)*Difficulty.get(G.difficulty).spawn*G.roundMode().spawn
  G.player=Player.new()
- G.player.speed=265+G.boots*20
+ G.player.speed=265+G.boots*Costs.upgrades.speedStep
  G.ball=Ball.new()
  Ball.enforceSpeed(G.ball,G.ballSpeed())
  G.roundStars=0
@@ -260,16 +275,14 @@ function G.endRound()
  if G.state~='playing' then return end
  local played=G.round
  local hits=G.roundHits
- local base=18+6*played
- local skill=math.min(15,hits)*2
  local goal=G.progress()>=G.goal() and G.bonus() or 0
- G.reward=math.floor((base+skill+goal)*Difficulty.get(G.difficulty).bonus*G.roundMode().reward+.5)
+ G.reward=Economy.roundReward(played,hits,goal,Difficulty.get(G.difficulty).bonus*G.roundMode().reward,G.coins).credited
  local previousGems,previousCoins=Progress.gems,G.coins
  Progress.awardRound(played,G.difficulty)
  G.gemsReward=Progress.gems-previousGems
- G.coins=math.min(99999,G.coins+G.reward)
+ G.coins=G.coins+G.reward
  G.reward=G.coins-previousCoins
- G.score=G.score+played*30+goal*5
+ G.score=G.score+played*Costs.rewards.roundScore+goal*Costs.rewards.goalScore
  G.previousRound=played
  G.previousHits=hits
  G.round=math.min(999,played+1)
@@ -300,20 +313,16 @@ function G.finish(reason)
 end
 function G.buy(index)
  if G.state~='shop' then return false end
- local info=O.types[index]
- if not info then return false end
- if G.coins<info.cost then G.notify('Te faltan '..(info.cost-G.coins)..' monedas') Sound.play('warn') return false end
- local total=0
- for _,v in ipairs(G.inventory) do total=total+v end
- if G.inventory[index]>=5 then G.notify('Máximo: 5 unidades de este objeto') return false end
- if total>=12 then G.notify('Mochila llena: máximo 12 objetos') return false end
- G.coins=G.coins-info.cost
- G.inventory[index]=G.inventory[index]+1
+ local ok,reason,cost=Economy.canBuy(G,index)
+ if not ok then G.notify(reason) Sound.play('warn') return false end
+ local before,after=G.snapshot(),G.snapshot()
+ after.coins=after.coins-cost after.inventory[index]=after.inventory[index]+1
+ if not commitPurchase(before,after) then return false end
  Sound.play('coin',1.05)
- G.notify(info.name..' añadido a la mochila')
- G.saveSession()
+ G.notify(O.types[index].name..' añadido a la mochila')
  return true
 end
+
 function G.place(x,y)
  if G.state~='playing' then return false end
  local kind=O.selected

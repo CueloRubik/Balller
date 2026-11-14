@@ -27,11 +27,11 @@ function S.draw()
    UI.singleLine(math.floor(data.score)..' puntos · '..math.floor(data.coins)..' monedas',206,y+73,350,UI.fonts.small,C.muted)
    local saved='Fecha no disponible'
    if type(state.modified)=='number' then saved=os.date('%d/%m/%Y %H:%M',math.floor(state.modified)) end
-   UI.singleLine(state.status=='recoverable' and ('Copia disponible: '..saved) or ('Guardado: '..saved),206,y+102,350,UI.fonts.tiny,state.status=='recoverable' and C.mintDark or C.muted)
+   UI.singleLine(state.pendingPurchase and 'Compra pendiente de revisar' or (state.status=='recoverable' and ('Copia disponible: '..saved) or ('Guardado: '..saved)),206,y+102,350,UI.fonts.tiny,state.status=='recoverable' and C.mintDark or C.muted)
    if Flow.mode=='new' then
     button('slot'..slot,650,y+39,245,57,'Ocupada',C.blue,'lock',{disabled=true})
    else
-    button('slot'..slot,588,y+39,168,57,state.status=='recoverable' and 'Recuperar' or 'Continuar',C.mint,state.status=='recoverable' and 'save' or 'play')
+    button('slot'..slot,588,y+39,168,57,state.pendingPurchase and 'Revisar' or (state.status=='recoverable' and 'Recuperar' or 'Continuar'),C.mint,state.status=='recoverable' and 'save' or 'play')
     button('delete'..slot,767,y+39,130,57,'Borrar',C.red,'delete')
    end
   elseif state.status=='empty' then
@@ -65,9 +65,9 @@ function S.recovery(data)
  UI.color(C.navy,.6) love.graphics.rectangle('fill',0,0,1000,680)
  UI.panel(226,153,548,371)
  Icons.draw('save',500,209,59,C.mint)
- label('Partida recuperada',247,265,UI.fonts.title,C.ink,'center',506)
- label('Se restauró la copia de la partida '..data.slot..'.',250,328,UI.fonts.small,C.muted,'center',500)
- label(data.archive and 'El archivo dañado se conservó por seguridad.' or 'Se recuperó el archivo principal que faltaba.',250,360,UI.fonts.small,C.muted,'center',500)
+ label(data.kind=='purchase' and 'Compra revisada' or 'Partida recuperada',247,265,UI.fonts.title,C.ink,'center',506)
+ label(data.kind=='purchase' and 'Se revisó una compra que quedó interrumpida.' or ('Se restauró la copia de la partida '..data.slot..'.'),250,328,UI.fonts.small,C.muted,'center',500)
+ label(data.kind=='purchase' and 'Comprueba tu saldo y mochila antes de continuar.' or (data.archive and 'El archivo dañado se conservó por seguridad.' or 'Se recuperó el archivo principal que faltaba.'),250,360,UI.fonts.small,C.muted,'center',500)
  button('recoveryOK',340,437,320,60,'Abrir partida',C.mint,'play')
 end
 return S

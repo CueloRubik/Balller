@@ -46,11 +46,11 @@ function F.chooseSlot(game,slot)
  end
  local ok,status,detail=game.loadRun(slot)
  if not ok then
-  local messages={preserve_failed='No se pudo conservar el archivo dañado. La copia sigue disponible.',restore_failed='No se pudo restaurar la copia. Revisa el espacio e inténtalo de nuevo.'}
+  local messages={purchase_restore_failed='No se pudo revisar la compra pendiente. Reintenta antes de continuar.',preserve_failed='No se pudo conservar el archivo dañado. La copia sigue disponible.',restore_failed='No se pudo restaurar la copia. Revisa el espacio e inténtalo de nuevo.'}
   F.message=messages[status] or 'No se pudo abrir esta partida. No hay una copia válida disponible.'
   return false
  end
- if status=='recovered' then F.recovery=detail or {slot=slot} end
+ if status=='recovered' or status=='purchase_recovered' then F.recovery=detail or {slot=slot} end
  return true
 end
 function F.back(game)
